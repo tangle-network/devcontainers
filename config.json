@@ -1,0 +1,118 @@
+{
+  "intermediate_templates": {
+    "nodejs": "FROM base-system:latest\n\nLABEL description=\"Node.js intermediate layer\"\n",
+    "python": "FROM base-system:latest\n\nRUN pip3 install --no-cache-dir --upgrade pip setuptools wheel\n\nLABEL description=\"Python intermediate layer\"\n",
+    "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\nUSER project\n\nLABEL description=\"Rust intermediate layer\"\n"
+  },
+  "projects": {
+    "coinbase": {
+      "base": "nodejs",
+      "packages": {
+        "npm": ["@coinbase/coinbase-sdk"]
+      }
+    },
+    "injective": {
+      "base": "nodejs",
+      "packages": {
+        "npm": ["@injectivelabs/sdk-ts", "@injectivelabs/networks"]
+      }
+    },
+    "succinct": {
+      "base": "rust",
+      "packages": {
+        "cargo": ["sp1-sdk"]
+      }
+    },
+    "risc0": {
+      "base": "rust",
+      "packages": {
+        "cargo": ["risc0-zkvm"]
+      }
+    },
+    "brevis": {
+      "base": "rust",
+      "packages": {
+        "cargo": []
+      }
+    },
+    "ethereum": {
+      "base": "nodejs",
+      "packages": {
+        "npm": ["ethers", "viem", "@wagmi/core"]
+      }
+    },
+    "polygon": {
+      "base": "nodejs",
+      "packages": {
+        "npm": ["ethers", "viem", "@polygon-labs/sdk"]
+      }
+    },
+    "zksync": {
+      "base": "nodejs",
+      "packages": {
+        "npm": ["zksync-ethers", "ethers"]
+      }
+    },
+    "solana": {
+      "base": "rust",
+      "packages": {
+        "cargo": ["solana-sdk", "anchor-lang"]
+      }
+    },
+    "sui": {
+      "base": "rust",
+      "packages": {
+        "cargo": ["sui-sdk"]
+      }
+    },
+    "aptos": {
+      "base": "rust",
+      "packages": {
+        "cargo": ["aptos-sdk"]
+      }
+    },
+    "stylus": {
+      "base": "rust",
+      "packages": {
+        "cargo": ["stylus-sdk"]
+      }
+    },
+    "tangle": {
+      "base": "rust",
+      "packages": {
+        "cargo": ["tangle-sdk"]
+      }
+    },
+    "mongodb": {
+      "base": "nodejs",
+      "packages": {
+        "npm": ["mongodb"]
+      }
+    },
+    "convex": {
+      "base": "nodejs",
+      "packages": {
+        "npm": ["convex"]
+      }
+    },
+    "postgresql": {
+      "base": "nodejs",
+      "packages": {
+        "npm": ["pg", "@types/pg"]
+      }
+    },
+    "rindexer": {
+      "base": "rust",
+      "packages": {
+        "cargo": []
+      }
+    },
+    "reth": {
+      "base": "rust",
+      "packages": {
+        "cargo": ["reth"]
+      }
+    }
+  }
+}
+
