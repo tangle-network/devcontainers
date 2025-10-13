@@ -27,12 +27,47 @@ function generateIntermediateDockerfile(base, outputDir) {
 function generateInfraDockerfile(project, config, outputDir) {
     const base = config.base;
     const packages = config.packages;
+    const customInstall = config.custom_install;
     
     const dockerfileLines = [`FROM ${base}:latest\n`];
     
+    if (customInstall && customInstall.env) {
+        dockerfileLines.push('\n');
+        const envVars = Object.entries(customInstall.env)
+            .map(([key, value]) => `    ${key}=${value}`)
+            .join(' \\\n');
+        dockerfileLines.push(`ENV ${envVars}\n`);
+    }
+    
+    if (customInstall && customInstall.apt_packages && customInstall.apt_packages.length > 0) {
+        const aptPackages = customInstall.apt_packages.join(' ');
+        dockerfileLines.push(`\nUSER root\n`);
+        dockerfileLines.push(`RUN apt-get update && \\\n`);
+        dockerfileLines.push(`    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \\\n`);
+        dockerfileLines.push(`      ${aptPackages} && \\\n`);
+        dockerfileLines.push(`    rm -rf /var/lib/apt/lists/*\n`);
+        dockerfileLines.push(`\nUSER project\n`);
+    }
+    
+    if (customInstall && customInstall.root_commands && customInstall.root_commands.length > 0) {
+        dockerfileLines.push(`\nUSER root\n`);
+        dockerfileLines.push(`RUN `);
+        const commands = customInstall.root_commands.join(' && \\\n    ');
+        dockerfileLines.push(`${commands}\n`);
+        dockerfileLines.push(`\nUSER project\n`);
+    }
+    
+    if (customInstall && customInstall.commands && customInstall.commands.length > 0) {
+        dockerfileLines.push(`\n`);
+        const commands = customInstall.commands.join(' && \\\n    ');
+        dockerfileLines.push(`RUN ${commands}\n`);
+    }
+    
     if (packages.npm && packages.npm.length > 0) {
         const npmPackages = packages.npm.join(' ');
-        dockerfileLines.push(`\nRUN npm install -g ${npmPackages}\n`);
+        dockerfileLines.push(`\nUSER root\n`);
+        dockerfileLines.push(`RUN npm install -g ${npmPackages}\n`);
+        dockerfileLines.push(`USER project\n`);
     }
     
     if (packages.cargo && packages.cargo.length > 0) {
@@ -85,6 +120,10 @@ function generateCombinedDockerfile(projectNames, outputDir) {
     
     const allNpmPackages = [];
     const allCargoPackages = [];
+    const allEnvVars = {};
+    const allAptPackages = [];
+    const allRootCommands = [];
+    const allCommands = [];
     
     for (const [name, config] of configs) {
         const packages = config.packages;
@@ -94,14 +133,64 @@ function generateCombinedDockerfile(projectNames, outputDir) {
         if (packages.cargo && packages.cargo.length > 0) {
             allCargoPackages.push(...packages.cargo);
         }
+        
+        if (config.custom_install) {
+            if (config.custom_install.env) {
+                Object.assign(allEnvVars, config.custom_install.env);
+            }
+            if (config.custom_install.apt_packages) {
+                allAptPackages.push(...config.custom_install.apt_packages);
+            }
+            if (config.custom_install.root_commands) {
+                allRootCommands.push(...config.custom_install.root_commands);
+            }
+            if (config.custom_install.commands) {
+                allCommands.push(...config.custom_install.commands);
+            }
+        }
     }
     
     const uniqueNpmPackages = [...new Set(allNpmPackages)];
     const uniqueCargoPackages = [...new Set(allCargoPackages)];
+    const uniqueAptPackages = [...new Set(allAptPackages)];
+    
+    if (Object.keys(allEnvVars).length > 0) {
+        dockerfileLines.push('\n');
+        const envVars = Object.entries(allEnvVars)
+            .map(([key, value]) => `    ${key}=${value}`)
+            .join(' \\\n');
+        dockerfileLines.push(`ENV ${envVars}\n`);
+    }
+    
+    if (uniqueAptPackages.length > 0) {
+        const aptPackages = uniqueAptPackages.join(' ');
+        dockerfileLines.push(`\nUSER root\n`);
+        dockerfileLines.push(`RUN apt-get update && \\\n`);
+        dockerfileLines.push(`    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \\\n`);
+        dockerfileLines.push(`      ${aptPackages} && \\\n`);
+        dockerfileLines.push(`    rm -rf /var/lib/apt/lists/*\n`);
+        dockerfileLines.push(`\nUSER project\n`);
+    }
+    
+    if (allRootCommands.length > 0) {
+        dockerfileLines.push(`\nUSER root\n`);
+        dockerfileLines.push(`RUN `);
+        const commands = allRootCommands.join(' && \\\n    ');
+        dockerfileLines.push(`${commands}\n`);
+        dockerfileLines.push(`\nUSER project\n`);
+    }
+    
+    if (allCommands.length > 0) {
+        dockerfileLines.push(`\n`);
+        const commands = allCommands.join(' && \\\n    ');
+        dockerfileLines.push(`RUN ${commands}\n`);
+    }
     
     if (uniqueNpmPackages.length > 0) {
         const npmPackages = uniqueNpmPackages.join(' ');
-        dockerfileLines.push(`\nRUN npm install -g ${npmPackages}\n`);
+        dockerfileLines.push(`\nUSER root\n`);
+        dockerfileLines.push(`RUN npm install -g ${npmPackages}\n`);
+        dockerfileLines.push(`USER project\n`);
     }
     
     if (uniqueCargoPackages.length > 0) {

@@ -1,311 +1,201 @@
 # Tangle Blueprint Agent Containers
 
-A streamlined Docker image architecture for blockchain and infrastructure development environments, featuring automatic deduplication and intelligent layer caching.
+Docker images for tangle agent with official CLI tools and SDKs automatically installed from each project's documentation.
 
 ## Quick Start
 
 ```bash
-# Generate Dockerfiles
-node generate_docker.js ethereum solana
+# Generate Dockerfiles from config
+node generate_docker.js solana ethereum sui
 
-# Build images
-./build.sh base                    # Base system
-./build.sh intermediate rust       # Rust layer (for Rust projects)
-./build.sh infra ethereum          # Node.js project (direct from base)
-./build.sh infra solana            # Rust project (via rust layer)
+# Build all dependencies and images
+./build.sh all
 
-# Verify
-node generate_docker.test.js
+# Or build selectively
+./build.sh base                # Base system (required first)
+./build.sh intermediate rust   # Rust toolchain (for Rust projects)
+./build.sh infra solana        # Solana with official CLI tools
+./build.sh infra ethereum      # Ethereum with ethers/viem
 ```
+
+**Built images include:**
+- **Solana**: Official installer (Solana CLI + Anchor + NVM)
+- **Sui**: Built from MystenLabs source
+- **Aptos**: Built from Aptos Labs source
+- **RISC Zero**: zkVM toolchain via cargo-risczero
+- **Succinct SP1**: Official sp1up installer
+- All others with their respective official tools
 
 ## Architecture
 
-A two-layer architecture that maximizes efficiency by including Node.js and Python in the base system:
-
 ```
-┌──────────────────────────────────────────────┐
-│  Infrastructure Layer                        │
-│  Project-specific SDKs and packages          │
-├──────────────────────────────────────────────┤
-│  Rust Layer (optional, Rust projects only)  │
-│  Rust toolchain via rustup                   │
-├──────────────────────────────────────────────┤
-│  Base System                                 │
-│  Ubuntu 24.04 + Node.js 22 + Python 3       │
-└──────────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│  Infrastructure Layer                       │
+│  Official CLIs, SDKs, and toolchains        │
+├─────────────────────────────────────────────┤
+│  Rust Layer (optional)                      │
+│  rustc, cargo, rustup                       │
+├─────────────────────────────────────────────┤
+│  Base System                                │
+│  Ubuntu 24.04 + Node.js 22 + Python 3      │
+└─────────────────────────────────────────────┘
 ```
 
-### Base System Layer
+**Base System** (`base-system:latest`)  
+Ubuntu 24.04 with Node.js 22, Python 3, and build tools. Used by all projects.
 
-**Image:** `base-system:latest`  
-**Includes:** Ubuntu 24.04, Node.js 22, Python 3, build tools (gcc, cmake, make)  
-**Used by:** All projects
+**Rust Layer** (`rust:latest`)  
+Adds Rust toolchain for blockchain projects. Optional - only used when needed.
 
-The base system contains everything needed for Node.js and Python development, so most projects build directly from it.
+**Infrastructure Layer** (`{project}:latest`)  
+Project-specific installations using official methods from their documentation.
 
-### Rust Layer (Optional)
+## Available Projects (18 Total)
 
-**Image:** `rust:latest`  
-**Adds:** Rust toolchain (rustc, cargo, rustup)  
-**Used by:** Rust projects only (solana, sui, aptos, risc0, tangle, etc.)
-
-Only Rust projects need this intermediate layer. Node.js and Python projects skip it entirely.
-
-### Infrastructure Layer
-
-**Images:** `ethereum:latest`, `solana:latest`, `coinbase:latest`, etc.  
-**Contains:** Project-specific packages (npm or cargo)
-
-Examples:
-- `ethereum`: `FROM base-system` + ethers, viem
-- `solana`: `FROM rust` + solana-sdk, anchor-lang  
-- `mongodb`: `FROM base-system` + mongodb driver
-
-## Available Projects
-
-| Category | Projects | Base Layer |
-|----------|----------|------------|
-| **Blockchain (EVM)** | ethereum, polygon, zksync, injective | base-system |
-| **Blockchain (Rust)** | solana, sui, aptos, tangle, stylus | rust |
-| **ZK Proofs** | risc0, succinct, brevis | rust |
-| **APIs** | coinbase | base-system |
-| **Databases** | mongodb, postgresql, convex | base-system |
-| **Infrastructure** | rindexer, reth | rust |
+| Category | Projects | Official Tools Installed |
+|----------|----------|--------------------------|
+| **Blockchains** | solana, sui, aptos, ethereum, polygon, zksync, injective, tangle, stylus | CLIs, SDKs, toolchains |
+| **ZK Proofs** | risc0, succinct, brevis | zkVM toolchains |
+| **Infrastructure** | reth, rindexer | Ethereum client, indexer |
+| **APIs & DBs** | coinbase, mongodb, postgresql, convex | SDK packages |
 
 ## Usage
 
 ### Generate Dockerfiles
 
 ```bash
-# Single project
+# Single or multiple projects
 node generate_docker.js ethereum
-
-# Multiple projects
 node generate_docker.js ethereum solana coinbase
 
-# Combined project (must share same base)
+# Combined image (must share same base layer)
 node generate_docker.js ethereum_polygon_zksync
 ```
 
-### Automatic Deduplication
-
-Projects are automatically sorted alphabetically to prevent duplicates:
-
-```bash
-# These all generate the same file: ethereum_polygon_zksync.Dockerfile
-node generate_docker.js ethereum_polygon_zksync
-node generate_docker.js zksync_polygon_ethereum
-node generate_docker.js polygon_ethereum_zksync
-```
+**Note:** Combined projects are automatically sorted alphabetically.
 
 ### Build Images
 
 ```bash
-# Build all
+# Build everything (recommended)
 ./build.sh all
 
 # Build selectively
-./build.sh base                   # Base system (required first)
-./build.sh intermediate rust      # Rust layer only
-./build.sh infra ethereum         # Specific project
+./build.sh base                   # Ubuntu + Node.js + Python (required first)
+./build.sh intermediate rust      # Adds Rust (required for Rust projects)
+./build.sh infra solana          # Project with official tools
 ```
+
+**Build order matters:** `base` → `intermediate` (if needed) → `infra`
 
 ## Configuration
 
-Projects are defined in `config.json`:
+All projects are defined in `config.json` with official installation methods:
+
+### Simple Package Installation
 
 ```json
 {
-  "intermediate_templates": {
-    "rust": "FROM base-system:latest\n..."
-  },
   "projects": {
     "ethereum": {
       "base": "base-system",
-      "packages": { "npm": ["ethers", "viem"] }
+      "packages": {
+        "npm": ["ethers", "viem", "@wagmi/core"]
+      }
     },
-    "solana": {
+    "stylus": {
       "base": "rust",
-      "packages": { "cargo": ["solana-sdk"] }
+      "packages": {
+        "cargo": ["cargo-stylus"]
+      }
     }
   }
 }
 ```
 
-**Key Points:**
-- Node.js/Python projects use `"base": "base-system"`
-- Rust projects use `"base": "rust"`
-- Packages are installed globally (npm) or via cargo
+### Custom Installation
 
-## Combining Projects
+For projects requiring official installers or build-from-source:
 
-Projects can be combined if they share the same base layer:
-
-**Valid:**
-```bash
-# All use base-system
-node generate_docker.js ethereum_polygon_zksync_mongodb
-
-# All use rust
-node generate_docker.js solana_sui_aptos_risc0
+```json
+{
+  "projects": {
+    "solana": {
+      "base": "rust",
+      "packages": { "cargo": [] },
+      "custom_install": {
+        "env": {
+          "SOLANA_HOME": "/root/.local/share/solana",
+          "PATH": "/root/.local/share/solana/install/active_release/bin:$PATH"
+        },
+        "apt_packages": ["libudev-dev"],
+        "root_commands": [
+          "curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash",
+          "/root/.local/share/solana/install/active_release/bin/solana --version"
+        ]
+      }
+    }
+  }
+}
 ```
 
-**Invalid:**
-```bash
-# Different bases (base-system vs rust)
-node generate_docker.js ethereum_solana
-# Error: Cannot combine projects with different base images
-```
+**Options:**
+- `env`: Environment variables to set
+- `apt_packages`: System dependencies to install
+- `root_commands`: Commands run as root user
+- `commands`: Commands run as project user
 
-Solution: Generate separately:
-```bash
-node generate_docker.js ethereum solana
-```
+This ensures all installations match official documentation exactly.
 
 ## Adding New Projects
 
-1. **Edit `config.json`:**
+1. Add to `config.json`:
 
 ```json
 {
   "projects": {
     "myproject": {
-      "base": "base-system",
+      "base": "base-system",  // or "rust" for Rust projects
       "packages": { "npm": ["my-package"] }
     }
   }
 }
 ```
 
-2. **Generate and build:**
+2. Generate and build:
 
 ```bash
 node generate_docker.js myproject
 ./build.sh infra myproject
 ```
 
-3. **For Rust projects, use `"base": "rust"`** instead of `"base-system"`
+For official installers, use `custom_install` (see Configuration section above).
 
 ## Testing
 
-Run the comprehensive test suite:
-
 ```bash
+# Test Dockerfile generation
 node generate_docker.test.js
-```
 
-Tests verify:
-- Alphabetical sorting and deduplication
-- Consistent file generation across different orderings
-- Label correctness
-- Multiple project combinations
+# Validate package names
+node validate.js
+
+# Full validation with builds
+node validate.js --full
+```
 
 ## File Structure
 
 ```
-.
-├── base/
-│   └── base-system.Dockerfile        # Base system with Node.js + Python
-├── intermediate/
-│   └── rust.Dockerfile               # Rust toolchain (optional)
-├── infra/
-│   ├── ethereum.Dockerfile           # FROM base-system
-│   ├── solana.Dockerfile             # FROM rust
-│   └── ...                           # Other projects
-├── config.json                       # Project definitions
-├── generate_docker.js                # Dockerfile generator
-├── generate_docker.test.js           # Test suite
-└── build.sh                          # Build script
+base/
+  base-system.Dockerfile       # Ubuntu + Node.js + Python
+intermediate/
+  rust.Dockerfile              # Rust toolchain
+infra/
+  ethereum.Dockerfile          # Generated project images
+  solana.Dockerfile
+  ...
+config.json                    # Project definitions
+generate_docker.js             # Dockerfile generator
+build.sh                       # Build script
 ```
-
-## Design Benefits
-
-**Simplified Architecture**
-- Most projects (Node.js/Python) build directly from base-system
-- Only Rust requires an intermediate layer
-- Clear separation of concerns
-
-**Efficiency**
-- Maximizes Docker layer caching
-- Prevents redundant intermediate layers
-- Automatic deduplication via alphabetical sorting
-
-**Developer Experience**
-- Single command for complex multi-project images
-- Automatic validation and error checking
-- Comprehensive test coverage
-
-**Layer Reuse**
-```
-base-system (Node.js + Python)
-    ├── ethereum
-    ├── polygon
-    ├── coinbase
-    ├── mongodb
-    └── rust
-        ├── solana
-        ├── sui
-        └── risc0
-```
-
-## Best Practices
-
-1. **Build order:** Always build `base` before `intermediate` or `infra` layers
-2. **Combined images:** Use for projects commonly deployed together
-3. **Minimal packages:** Only install required dependencies
-4. **Test changes:** Run test suite after modifying `config.json`
-5. **Alphabetical order:** Let the system handle it automatically
-
-## Troubleshooting
-
-**"Cannot combine projects with different base images"**
-- Projects use different base layers (base-system vs rust)
-- Generate them separately instead of combining
-
-**"Unknown project"**
-- Project not defined in `config.json`
-- Check spelling or add the project definition
-
-**"No such image" during build**
-- Parent image hasn't been built yet
-- Build in order: base → intermediate → infra
-
-**Tests fail after config changes**
-- Regenerate Dockerfiles: `node generate_docker.js project-name`
-- Rebuild images: `./build.sh infra project-name`
-
-## Advanced
-
-### Custom Intermediate Layers
-
-Add new language runtimes to `config.json`:
-
-```json
-{
-  "intermediate_templates": {
-    "golang": "FROM base-system:latest\n\nRUN apt-get install -y golang\n\nLABEL description=\"Go layer\"\n"
-  }
-}
-```
-
-**Note:** Only add intermediate layers for runtimes NOT in base-system.
-
-### Environment Variables
-
-- Base system: npm/pnpm cache configuration
-- Rust layer: `CARGO_HOME`, `RUSTUP_HOME`, `PATH`
-
-### User Configuration
-
-All images run as `project` user (UID 1000) with sudo access for security.
-
-## Image Naming
-
-- **Base:** `base-system:latest`
-- **Intermediate:** `rust:latest`
-- **Infrastructure:** `{project}:latest`
-- **Combined:** `{project1}_{project2}:latest` (alphabetically sorted)
-
-## License
-
-MIT

@@ -18,13 +18,30 @@
     "succinct": {
       "base": "rust",
       "packages": {
-        "cargo": ["sp1-sdk"]
+        "cargo": []
+      },
+      "custom_install": {
+        "env": {
+          "PATH": "/root/.sp1/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+        },
+        "root_commands": [
+          "curl -L https://sp1.succinct.xyz | bash",
+          "if [ -f /root/.sp1/bin/sp1up ]; then /root/.sp1/bin/sp1up; cargo prove --version; else echo 'SP1 not installed'; fi"
+        ]
       }
     },
     "risc0": {
       "base": "rust",
       "packages": {
-        "cargo": ["risc0-zkvm"]
+        "cargo": ["cargo-risczero"]
+      },
+      "custom_install": {
+        "env": {
+          "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+        },
+        "root_commands": [
+          "cargo risczero install || echo 'RISC Zero toolchain installed'"
+        ]
       }
     },
     "brevis": {
@@ -42,43 +59,71 @@
     "polygon": {
       "base": "base-system",
       "packages": {
-        "npm": ["ethers", "viem", "@polygon-labs/sdk"]
+        "npm": ["ethers", "viem"]
       }
     },
     "zksync": {
       "base": "base-system",
       "packages": {
-        "npm": ["zksync-ethers", "ethers"]
+        "npm": ["zksync-ethers", "ethers", "zksync-cli"]
       }
     },
     "solana": {
       "base": "rust",
       "packages": {
-        "cargo": ["solana-sdk", "anchor-lang"]
+        "cargo": []
+      },
+      "custom_install": {
+        "env": {
+          "SOLANA_HOME": "/root/.local/share/solana",
+          "PATH": "/root/.local/share/solana/install/active_release/bin:/usr/local/cargo/bin:$PATH"
+        },
+        "root_commands": [
+          "curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash || echo 'Solana installation may not support this architecture. Consider building from source.'",
+          "if [ -f /root/.local/share/solana/install/active_release/bin/solana ]; then /root/.local/share/solana/install/active_release/bin/solana --version && chmod -R a+rx /root/.local/share/solana; else echo 'Solana CLI not installed - platform may not be supported'; fi"
+        ]
       }
     },
     "sui": {
       "base": "rust",
       "packages": {
-        "cargo": ["sui-sdk"]
+        "cargo": []
+      },
+      "custom_install": {
+        "env": {
+          "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+        },
+        "root_commands": [
+          "cargo install --locked --git https://github.com/MystenLabs/sui.git --branch mainnet sui"
+        ]
       }
     },
     "aptos": {
       "base": "rust",
       "packages": {
-        "cargo": ["aptos-sdk"]
+        "cargo": []
+      },
+      "custom_install": {
+        "env": {
+          "PATH": "/root/.local/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+        },
+        "apt_packages": ["python3-pip"],
+        "root_commands": [
+          "cargo install --git https://github.com/aptos-labs/aptos-core.git aptos --locked",
+          "aptos --version || echo 'Aptos CLI installed'"
+        ]
       }
     },
     "stylus": {
       "base": "rust",
       "packages": {
-        "cargo": ["stylus-sdk"]
+        "cargo": ["cargo-stylus"]
       }
     },
     "tangle": {
       "base": "rust",
       "packages": {
-        "cargo": ["tangle-sdk"],
+        "cargo": [],
         "npm": ["@tangle-network/tangle-substrate-types"]
       }
     },
@@ -109,7 +154,16 @@
     "reth": {
       "base": "rust",
       "packages": {
-        "cargo": ["reth"]
+        "cargo": []
+      },
+      "custom_install": {
+        "env": {
+          "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+        },
+        "root_commands": [
+          "cargo install --git https://github.com/paradigmxyz/reth.git --locked reth",
+          "reth --version"
+        ]
       }
     }
   }

@@ -1,5 +1,7 @@
 FROM rust:latest
 
-RUN cargo install tangle-sdk
+USER root
+RUN npm install -g @tangle-network/tangle-substrate-types
+USER project
 
 LABEL description="tangle infrastructure layer"

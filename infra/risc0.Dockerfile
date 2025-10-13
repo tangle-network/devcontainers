@@ -1,5 +1,12 @@
 FROM rust:latest
 
-RUN cargo install risc0-zkvm
+ENV     PATH=/root/.cargo/bin:/usr/local/cargo/bin:$PATH
+
+USER root
+RUN cargo risczero install || echo 'RISC Zero toolchain installed'
+
+USER project
+
+RUN cargo install cargo-risczero
 
 LABEL description="risc0 infrastructure layer"
