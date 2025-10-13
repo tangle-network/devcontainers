@@ -72,7 +72,10 @@ function generateInfraDockerfile(project, config, outputDir) {
     
     if (packages.cargo && packages.cargo.length > 0) {
         for (const pkg of packages.cargo) {
-            dockerfileLines.push(`\nRUN cargo install ${pkg}\n`);
+            const cargoCmd = pkg.includes('@') 
+                ? `cargo install ${pkg.split('@')[0]} --version ${pkg.split('@')[1]}`
+                : `cargo install ${pkg}`;
+            dockerfileLines.push(`\nRUN ${cargoCmd}\n`);
         }
     }
     
@@ -195,7 +198,10 @@ function generateCombinedDockerfile(projectNames, outputDir) {
     
     if (uniqueCargoPackages.length > 0) {
         for (const pkg of uniqueCargoPackages) {
-            dockerfileLines.push(`\nRUN cargo install ${pkg}\n`);
+            const cargoCmd = pkg.includes('@') 
+                ? `cargo install ${pkg.split('@')[0]} --version ${pkg.split('@')[1]}`
+                : `cargo install ${pkg}`;
+            dockerfileLines.push(`\nRUN ${cargoCmd}\n`);
         }
     }
     
