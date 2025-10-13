@@ -1,0 +1,226 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+
+function loadConfig() {
+    const configPath = path.join(__dirname, 'config.json');
+    const configData = fs.readFileSync(configPath, 'utf8');
+    return JSON.parse(configData);
+}
+
+const config = loadConfig();
+const PROJECT_CONFIGS = config.projects;
+const INTERMEDIATE_TEMPLATES = config.intermediate_templates;
+
+function generateIntermediateDockerfile(base, outputDir) {
+    if (!(base in INTERMEDIATE_TEMPLATES)) {
+        throw new Error(`Unknown base: ${base}`);
+    }
+    
+    const filepath = path.join(outputDir, `${base}.Dockerfile`);
+    fs.writeFileSync(filepath, INTERMEDIATE_TEMPLATES[base]);
+    
+    console.log(`Generated intermediate: ${filepath}`);
+}
+
+function generateInfraDockerfile(project, config, outputDir) {
+    const base = config.base;
+    const packages = config.packages;
+    
+    const dockerfileLines = [`FROM ${base}:latest\n`];
+    
+    if (packages.npm && packages.npm.length > 0) {
+        const npmPackages = packages.npm.join(' ');
+        dockerfileLines.push(`\nRUN npm install -g ${npmPackages}\n`);
+    }
+    
+    if (packages.cargo && packages.cargo.length > 0) {
+        for (const pkg of packages.cargo) {
+            dockerfileLines.push(`\nRUN cargo install ${pkg}\n`);
+        }
+    }
+    
+    dockerfileLines.push(`\nLABEL description="${project} infrastructure layer"\n`);
+    
+    const filepath = path.join(outputDir, `${project}.Dockerfile`);
+    fs.writeFileSync(filepath, dockerfileLines.join(''));
+    
+    console.log(`Generated infra: ${filepath}`);
+}
+
+function generateCombinedDockerfile(projectNames, outputDir) {
+    const sortedProjectNames = [...projectNames].sort();
+    
+    if (JSON.stringify(projectNames) !== JSON.stringify(sortedProjectNames)) {
+        console.log(`Sorting projects alphabetically: ${sortedProjectNames.join('_')}`);
+    }
+    
+    const configs = [];
+    let base = null;
+    
+    for (const name of sortedProjectNames) {
+        if (!(name in PROJECT_CONFIGS)) {
+            console.log(`Error: Unknown project '${name}'`);
+            return false;
+        }
+        
+        const config = PROJECT_CONFIGS[name];
+        const projectBase = config.base;
+        
+        if (base === null) {
+            base = projectBase;
+        } else if (base !== projectBase) {
+            console.log(`Error: Cannot combine projects with different base images`);
+            console.log(`  ${sortedProjectNames[0]} uses '${base}'`);
+            console.log(`  ${name} uses '${projectBase}'`);
+            return false;
+        }
+        
+        configs.push([name, config]);
+    }
+    
+    const combinedName = sortedProjectNames.join('_');
+    const dockerfileLines = [`FROM ${base}:latest\n`];
+    
+    const allNpmPackages = [];
+    const allCargoPackages = [];
+    
+    for (const [name, config] of configs) {
+        const packages = config.packages;
+        if (packages.npm && packages.npm.length > 0) {
+            allNpmPackages.push(...packages.npm);
+        }
+        if (packages.cargo && packages.cargo.length > 0) {
+            allCargoPackages.push(...packages.cargo);
+        }
+    }
+    
+    const uniqueNpmPackages = [...new Set(allNpmPackages)];
+    const uniqueCargoPackages = [...new Set(allCargoPackages)];
+    
+    if (uniqueNpmPackages.length > 0) {
+        const npmPackages = uniqueNpmPackages.join(' ');
+        dockerfileLines.push(`\nRUN npm install -g ${npmPackages}\n`);
+    }
+    
+    if (uniqueCargoPackages.length > 0) {
+        for (const pkg of uniqueCargoPackages) {
+            dockerfileLines.push(`\nRUN cargo install ${pkg}\n`);
+        }
+    }
+    
+    const projectsDesc = sortedProjectNames.join(', ');
+    dockerfileLines.push(`\nLABEL description="Combined: ${projectsDesc}"\n`);
+    
+    const filepath = path.join(outputDir, `${combinedName}.Dockerfile`);
+    fs.writeFileSync(filepath, dockerfileLines.join(''));
+    
+    console.log(`Generated combined infra: ${filepath}`);
+    return true;
+}
+
+function main() {
+    if (process.argv.length < 3) {
+        console.log('Usage: node generate_docker.js <project_name> [project_name2 ...]');
+        console.log('       node generate_docker.js <project1_project2_...>');
+        console.log('\nAvailable projects:');
+        for (const project of Object.keys(PROJECT_CONFIGS).sort()) {
+            console.log(`  - ${project}`);
+        }
+        console.log('\nExamples:');
+        console.log('  node generate_docker.js coinbase');
+        console.log('  node generate_docker.js coinbase_mongodb_postgresql');
+        console.log('  node generate_docker.js ethereum solana');
+        console.log('\nNote: Combined projects are automatically sorted alphabetically.');
+        console.log('  ethereum_polygon_zksync and zksync_polygon_ethereum generate the same file.');
+        process.exit(1);
+    }
+    
+    const rootDir = __dirname;
+    const intermediateDir = path.join(rootDir, 'intermediate');
+    const infraDir = path.join(rootDir, 'infra');
+    
+    if (!fs.existsSync(intermediateDir)) {
+        fs.mkdirSync(intermediateDir, { recursive: true });
+    }
+    if (!fs.existsSync(infraDir)) {
+        fs.mkdirSync(infraDir, { recursive: true });
+    }
+    
+    const projects = process.argv.slice(2);
+    
+    for (const projectSpec of projects) {
+        const normalizedSpec = projectSpec.toLowerCase();
+        
+        if (normalizedSpec.includes('_')) {
+            const projectNames = normalizedSpec.split('_').map(p => p.trim());
+            
+            if (projectNames.length === 0) {
+                console.log(`Error: Invalid project specification '${projectSpec}'`);
+                continue;
+            }
+            
+            if (projectNames.length === 1) {
+                const project = projectNames[0];
+                if (!(project in PROJECT_CONFIGS)) {
+                    console.log(`Error: Unknown project '${project}'`);
+                    continue;
+                }
+                
+                const config = PROJECT_CONFIGS[project];
+                const base = config.base;
+                
+                if (base !== 'base-system') {
+                    const intermediateFile = path.join(intermediateDir, `${base}.Dockerfile`);
+                    if (!fs.existsSync(intermediateFile) || fs.statSync(intermediateFile).size === 0) {
+                        generateIntermediateDockerfile(base, intermediateDir);
+                    }
+                }
+                
+                generateInfraDockerfile(project, config, infraDir);
+            } else {
+                const firstProject = projectNames[0];
+                if (firstProject in PROJECT_CONFIGS) {
+                    const base = PROJECT_CONFIGS[firstProject].base;
+                    if (base !== 'base-system') {
+                        const intermediateFile = path.join(intermediateDir, `${base}.Dockerfile`);
+                        if (!fs.existsSync(intermediateFile) || fs.statSync(intermediateFile).size === 0) {
+                            generateIntermediateDockerfile(base, intermediateDir);
+                        }
+                    }
+                }
+                
+                generateCombinedDockerfile(projectNames, infraDir);
+            }
+        } else {
+            const project = normalizedSpec;
+            
+            if (!(project in PROJECT_CONFIGS)) {
+                console.log(`Error: Unknown project '${project}'`);
+                console.log('\nAvailable projects:');
+                for (const p of Object.keys(PROJECT_CONFIGS).sort()) {
+                    console.log(`  - ${p}`);
+                }
+                continue;
+            }
+            
+            const config = PROJECT_CONFIGS[project];
+            const base = config.base;
+            
+            if (base !== 'base-system') {
+                const intermediateFile = path.join(intermediateDir, `${base}.Dockerfile`);
+                if (!fs.existsSync(intermediateFile) || fs.statSync(intermediateFile).size === 0) {
+                    generateIntermediateDockerfile(base, intermediateDir);
+                }
+            }
+            
+            generateInfraDockerfile(project, config, infraDir);
+        }
+    }
+}
+
+if (require.main === module) {
+    main();
+}
+

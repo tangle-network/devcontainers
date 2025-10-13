@@ -1,18 +1,16 @@
 {
   "intermediate_templates": {
-    "nodejs": "FROM base-system:latest\n\nLABEL description=\"Node.js intermediate layer\"\n",
-    "python": "FROM base-system:latest\n\nRUN pip3 install --no-cache-dir --upgrade pip setuptools wheel\n\nLABEL description=\"Python intermediate layer\"\n",
     "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\nUSER project\n\nLABEL description=\"Rust intermediate layer\"\n"
   },
   "projects": {
     "coinbase": {
-      "base": "nodejs",
+      "base": "base-system",
       "packages": {
         "npm": ["@coinbase/coinbase-sdk"]
       }
     },
     "injective": {
-      "base": "nodejs",
+      "base": "base-system",
       "packages": {
         "npm": ["@injectivelabs/sdk-ts", "@injectivelabs/networks"]
       }
@@ -36,19 +34,19 @@
       }
     },
     "ethereum": {
-      "base": "nodejs",
+      "base": "base-system",
       "packages": {
         "npm": ["ethers", "viem", "@wagmi/core"]
       }
     },
     "polygon": {
-      "base": "nodejs",
+      "base": "base-system",
       "packages": {
         "npm": ["ethers", "viem", "@polygon-labs/sdk"]
       }
     },
     "zksync": {
-      "base": "nodejs",
+      "base": "base-system",
       "packages": {
         "npm": ["zksync-ethers", "ethers"]
       }
@@ -80,23 +78,24 @@
     "tangle": {
       "base": "rust",
       "packages": {
-        "cargo": ["tangle-sdk"]
+        "cargo": ["tangle-sdk"],
+        "npm": ["@tangle-network/tangle-substrate-types"]
       }
     },
     "mongodb": {
-      "base": "nodejs",
+      "base": "base-system",
       "packages": {
         "npm": ["mongodb"]
       }
     },
     "convex": {
-      "base": "nodejs",
+      "base": "base-system",
       "packages": {
         "npm": ["convex"]
       }
     },
     "postgresql": {
-      "base": "nodejs",
+      "base": "base-system",
       "packages": {
         "npm": ["pg", "@types/pg"]
       }

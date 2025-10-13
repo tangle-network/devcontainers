@@ -1,4 +1,4 @@
-FROM nodejs:latest
+FROM base-system:latest
 
 RUN npm install -g ethers viem @wagmi/core
 
