@@ -8,4 +8,4 @@ RUN apt-get update && \
 
 USER project
 
-LABEL description="Ruby language layer"
+LABEL description="Ruby intermediate layer"

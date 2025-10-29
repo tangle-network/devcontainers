@@ -11,4 +11,4 @@ RUN apt-get update && \
 
 USER project
 
-LABEL description="PHP language layer"
+LABEL description="PHP intermediate layer"

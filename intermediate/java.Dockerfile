@@ -11,4 +11,4 @@ ENV JAVA_HOME=/usr/lib/jvm/java-21-openjdk-$(dpkg --print-architecture) \
 
 USER project
 
-LABEL description="Java/Kotlin language layer"
+LABEL description="Java/Kotlin intermediate layer"

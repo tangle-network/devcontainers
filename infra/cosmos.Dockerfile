@@ -5,4 +5,4 @@ RUN curl -L https://get.ignite.com/cli | bash
 
 USER project
 
-LABEL description="cosmos blueprint"
+LABEL description="cosmos infrastructure layer"

@@ -15,4 +15,4 @@ RUN ARCH=$(dpkg --print-architecture) && \
 
 USER project
 
-LABEL description="Go language layer"
+LABEL description="Go intermediate layer"

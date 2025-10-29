@@ -10,4 +10,4 @@ RUN apt-get update && \
 
 USER project
 
-LABEL description="C/C++ language layer"
+LABEL description="C/C++ intermediate layer"

@@ -8,4 +8,4 @@ RUN curl -L https://foundry.paradigm.xyz | bash && \
 
 USER project
 
-LABEL description="foundry blueprint"
+LABEL description="foundry infrastructure layer"

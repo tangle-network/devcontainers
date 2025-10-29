@@ -4,4 +4,4 @@ USER root
 RUN npm install -g redis ioredis
 USER project
 
-LABEL description="redis blueprint"
+LABEL description="redis infrastructure layer"
