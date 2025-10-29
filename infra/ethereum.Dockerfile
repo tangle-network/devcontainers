@@ -4,4 +4,4 @@ USER root
 RUN npm install -g ethers viem @wagmi/core
 USER project
 
-LABEL description="ethereum infrastructure layer"
+LABEL description="ethereum blueprint"

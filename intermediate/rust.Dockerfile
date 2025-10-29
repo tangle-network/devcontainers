@@ -10,4 +10,4 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
 
 USER project
 
-LABEL description="Rust intermediate layer"
+LABEL description="Rust language layer"
