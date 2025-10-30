@@ -1,171 +1,188 @@
 {
-  "intermediate_templates": {
-    "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\nUSER project\n\nLABEL description=\"Rust intermediate layer\"\n"
-  },
-  "projects": {
-    "coinbase": {
-      "base": "base-system",
-      "packages": {
-        "npm": ["@coinbase/coinbase-sdk"]
-      }
+    "intermediate_templates": {
+        "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\nUSER project\n\nLABEL description=\"Rust intermediate layer\"\n"
     },
-    "injective": {
-      "base": "base-system",
-      "packages": {
-        "npm": ["@injectivelabs/sdk-ts", "@injectivelabs/networks"]
-      }
-    },
-    "succinct": {
-      "base": "rust",
-      "packages": {
-        "cargo": []
-      },
-      "custom_install": {
-        "env": {
-          "PATH": "/root/.sp1/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+    "projects": {
+        "coinbase": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["@coinbase/coinbase-sdk"]
+            }
         },
-        "root_commands": [
-          "curl -L https://sp1.succinct.xyz | bash",
-          "if [ -f /root/.sp1/bin/sp1up ]; then /root/.sp1/bin/sp1up; cargo prove --version; else echo 'SP1 not installed'; fi"
-        ]
-      }
-    },
-    "risc0": {
-      "base": "rust",
-      "packages": {
-        "cargo": ["cargo-risczero"]
-      },
-      "custom_install": {
-        "env": {
-          "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+        "injective": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["@injectivelabs/sdk-ts", "@injectivelabs/networks"]
+            }
         },
-        "root_commands": [
-          "cargo risczero install || echo 'RISC Zero toolchain installed'"
-        ]
-      }
-    },
-    "brevis": {
-      "base": "rust",
-      "packages": {
-        "cargo": []
-      }
-    },
-    "ethereum": {
-      "base": "base-system",
-      "packages": {
-        "npm": ["ethers", "viem", "@wagmi/core"]
-      }
-    },
-    "polygon": {
-      "base": "base-system",
-      "packages": {
-        "npm": ["ethers", "viem"]
-      }
-    },
-    "zksync": {
-      "base": "base-system",
-      "packages": {
-        "npm": ["zksync-ethers", "ethers", "zksync-cli"]
-      }
-    },
-    "solana": {
-      "base": "rust",
-      "packages": {
-        "cargo": []
-      },
-      "custom_install": {
-        "env": {
-          "SOLANA_HOME": "/root/.local/share/solana",
-          "PATH": "/root/.local/share/solana/install/active_release/bin:/usr/local/cargo/bin:$PATH"
+        "succinct": {
+            "base": "rust",
+            "packages": {
+                "cargo": []
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.sp1/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "curl -L https://sp1.succinct.xyz | bash",
+                    "if [ -f /root/.sp1/bin/sp1up ]; then /root/.sp1/bin/sp1up; cargo prove --version; else echo 'SP1 not installed'; fi"
+                ]
+            }
         },
-        "root_commands": [
-          "curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash || echo 'Solana installation may not support this architecture. Consider building from source.'",
-          "if [ -f /root/.local/share/solana/install/active_release/bin/solana ]; then /root/.local/share/solana/install/active_release/bin/solana --version && chmod -R a+rx /root/.local/share/solana; else echo 'Solana CLI not installed - platform may not be supported'; fi"
-        ]
-      }
-    },
-    "sui": {
-      "base": "rust",
-      "packages": {
-        "cargo": []
-      },
-      "custom_install": {
-        "env": {
-          "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+        "risc0": {
+            "base": "rust",
+            "packages": {
+                "cargo": ["cargo-risczero"]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "cargo risczero install || echo 'RISC Zero toolchain installed'"
+                ]
+            }
         },
-        "root_commands": [
-          "cargo install --locked --git https://github.com/MystenLabs/sui.git --branch mainnet sui"
-        ]
-      }
-    },
-    "aptos": {
-      "base": "rust",
-      "packages": {
-        "cargo": []
-      },
-      "custom_install": {
-        "env": {
-          "PATH": "/root/.local/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
-        },
-        "apt_packages": ["python3-pip"],
-        "root_commands": [
-          "cargo install --git https://github.com/aptos-labs/aptos-core.git aptos --locked",
-          "aptos --version || echo 'Aptos CLI installed'"
-        ]
-      }
-    },
-    "stylus": {
-      "base": "rust",
-      "packages": {
-        "cargo": ["cargo-stylus"]
-      }
-    },
-    "tangle": {
-      "base": "rust",
-      "packages": {
-        "cargo": ["subxt-cli@0.39.0"],
-        "npm": ["@tangle-network/tangle-substrate-types"]
-      }
-    },
-    "mongodb": {
-      "base": "base-system",
-      "packages": {
-        "npm": ["mongodb"]
-      }
-    },
-    "convex": {
-      "base": "base-system",
-      "packages": {
-        "npm": ["convex"]
-      }
-    },
-    "postgresql": {
-      "base": "base-system",
-      "packages": {
-        "npm": ["pg", "@types/pg"]
-      }
-    },
-    "rindexer": {
-      "base": "rust",
-      "packages": {
-        "cargo": []
-      }
-    },
-    "reth": {
-      "base": "rust",
-      "packages": {
-        "cargo": []
-      },
-      "custom_install": {
-        "env": {
-          "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
-        },
-        "root_commands": [
-          "cargo install --git https://github.com/paradigmxyz/reth.git --locked reth",
-          "reth --version"
-        ]
-      }
-    }
-  }
-}
 
+        "ethereum": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["ethers", "viem", "@wagmi/core"]
+            }
+        },
+        "polygon": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["ethers", "viem"]
+            }
+        },
+        "zksync": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["zksync-ethers", "ethers", "zksync-cli"]
+            }
+        },
+        "solana": {
+            "base": "rust",
+            "packages": {
+                "cargo": []
+            },
+            "custom_install": {
+                "env": {
+                    "SOLANA_HOME": "/root/.local/share/solana",
+                    "PATH": "/root/.local/share/solana/install/active_release/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash || echo 'Solana installation may not support this architecture. Consider building from source.'",
+                    "if [ -f /root/.local/share/solana/install/active_release/bin/solana ]; then /root/.local/share/solana/install/active_release/bin/solana --version && chmod -R a+rx /root/.local/share/solana; else echo 'Solana CLI not installed - platform may not be supported'; fi"
+                ]
+            }
+        },
+        "sui": {
+            "base": "rust",
+            "packages": {
+                "cargo": []
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "cargo install --locked --git https://github.com/MystenLabs/sui.git --branch mainnet sui"
+                ]
+            }
+        },
+        "aptos": {
+            "base": "rust",
+            "packages": {
+                "cargo": []
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.local/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "apt_packages": ["python3-pip"],
+                "root_commands": [
+                    "cargo install --git https://github.com/aptos-labs/aptos-core.git aptos --locked",
+                    "aptos --version || echo 'Aptos CLI installed'"
+                ]
+            }
+        },
+        "stylus": {
+            "base": "rust",
+            "packages": {
+                "cargo": ["cargo-stylus"]
+            }
+        },
+        "tangle": {
+            "base": "rust",
+            "packages": {
+                "cargo": ["subxt-cli@0.39.0"],
+                "npm": ["@tangle-network/tangle-substrate-types"]
+            }
+        },
+
+        "reth": {
+            "base": "rust",
+            "packages": {
+                "cargo": []
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "cargo install --git https://github.com/paradigmxyz/reth.git --locked reth",
+                    "reth --version"
+                ]
+            }
+        },
+        "universal": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "typescript",
+                    "ts-node",
+                    "@types/node",
+                    "eslint",
+                    "prettier",
+                    "nodemon",
+                    "dotenv"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "GOROOT": "/usr/local/go",
+                    "GOPATH": "/go",
+                    "RUSTUP_HOME": "/usr/local/rustup",
+                    "CARGO_HOME": "/usr/local/cargo",
+                    "KOTLIN_HOME": "/opt/kotlinc",
+                    "PATH": "/usr/local/go/bin:/go/bin:/usr/local/cargo/bin:/opt/kotlinc/bin:$PATH"
+                },
+                "apt_packages": [
+                    "default-jdk",
+                    "maven",
+                    "gradle",
+                    "php",
+                    "php-cli",
+                    "php-mbstring",
+                    "php-xml",
+                    "ruby",
+                    "ruby-dev",
+                    "unzip"
+                ],
+                "root_commands": [
+                    "ARCH=$(dpkg --print-architecture) && if [ \"$ARCH\" = \"amd64\" ]; then GO_ARCH=\"amd64\"; elif [ \"$ARCH\" = \"arm64\" ]; then GO_ARCH=\"arm64\"; else echo \"Unsupported architecture: $ARCH\"; exit 1; fi && curl -fsSL https://go.dev/dl/go1.22.0.linux-${GO_ARCH}.tar.gz | tar -C /usr/local -xzf - && mkdir -p /go/bin /go/pkg /go/src && chmod -R a+w /go",
+                    "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && chmod -R a+w $RUSTUP_HOME $CARGO_HOME && rustup component add rustfmt clippy rust-analyzer",
+                    "curl -sSL https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer",
+                    "gem install bundler",
+                    "KOTLIN_VERSION=$(curl -s https://api.github.com/repos/JetBrains/kotlin/releases/latest | grep '\"tag_name\"' | sed -E 's/.*\"v([^\"]+)\".*/\\1/') && curl -sL https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip -o kotlin.zip && unzip -q kotlin.zip -d /opt && rm kotlin.zip && chmod -R a+rx /opt/kotlinc",
+                    "pip3 install --no-cache-dir poetry black mypy ruff pipx",
+                    "su - project -c 'go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest'",
+                    "su - project -c 'go install golang.org/x/tools/gopls@latest'"
+                ]
+            }
+        }
+    }
+}
