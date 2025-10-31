@@ -4,4 +4,4 @@ USER root
 RUN npm install -g supabase
 USER project
 
-LABEL description="supabase framework layer"
+LABEL description="supabase intermediate layer"

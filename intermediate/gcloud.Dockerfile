@@ -7,4 +7,4 @@ RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.
 
 USER project
 
-LABEL description="gcloud framework layer"
+LABEL description="gcloud intermediate layer"

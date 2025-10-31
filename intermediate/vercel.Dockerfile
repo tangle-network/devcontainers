@@ -4,4 +4,4 @@ USER root
 RUN npm install -g vercel
 USER project
 
-LABEL description="vercel framework layer"
+LABEL description="vercel intermediate layer"

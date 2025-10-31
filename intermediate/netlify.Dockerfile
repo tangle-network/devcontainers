@@ -4,4 +4,4 @@ USER root
 RUN npm install -g netlify-cli
 USER project
 
-LABEL description="netlify framework layer"
+LABEL description="netlify intermediate layer"

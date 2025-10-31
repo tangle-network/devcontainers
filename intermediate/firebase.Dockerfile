@@ -4,4 +4,4 @@ USER root
 RUN npm install -g firebase-tools firebase-admin
 USER project
 
-LABEL description="firebase framework layer"
+LABEL description="firebase intermediate layer"

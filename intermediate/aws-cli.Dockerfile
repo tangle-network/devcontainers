@@ -9,4 +9,4 @@ RUN curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zi
 
 USER project
 
-LABEL description="aws-cli framework layer"
+LABEL description="aws-cli intermediate layer"
