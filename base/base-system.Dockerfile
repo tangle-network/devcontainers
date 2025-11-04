@@ -16,7 +16,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
     && npm install -g corepack \
     && corepack prepare pnpm yarn --activate \
-    && npm install -g vite tsx turbo typescript @types/node \
+    && npm install -g vite tsx turbo typescript @types/node node-pty \
     && rm -rf /var/lib/apt/lists/*
 
 # Create project user and group for secure operations
