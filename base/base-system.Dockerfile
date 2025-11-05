@@ -17,7 +17,14 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && npm install -g corepack \
     && corepack prepare pnpm yarn --activate \
     && npm install -g vite tsx turbo typescript @types/node node-pty \
+    && npm install -g opencode-ai \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Claude Code
+RUN curl -fsSL https://claude.ai/install.sh | bash
+
+# Install Factory Droids CLI
+RUN curl -fsSL https://app.factory.ai/cli | sh
 
 # Create project user and group for secure operations
 # Use the existing ubuntu user (UID/GID 1000) and add to sudoers
