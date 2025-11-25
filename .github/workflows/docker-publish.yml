@@ -65,6 +65,13 @@ jobs:
           cache-from: type=gha,scope=base-system
           cache-to: type=gha,mode=max,scope=base-system
 
+      - name: Make package public
+        run: |
+          gh api --method PUT /orgs/${{ github.repository_owner }}/packages/container/devcontainers%2Fbase-system/visibility \
+            -f visibility=public || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-intermediate:
     if: github.event_name == 'push' || inputs.layer == 'all' || inputs.layer == 'intermediate'
     needs: build-base
@@ -104,6 +111,13 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           build-contexts: |
             base-system:latest=docker-image://${{ env.IMAGE_PREFIX }}/base-system:latest
+
+      - name: Make package public
+        run: |
+          gh api --method PUT /orgs/${{ github.repository_owner }}/packages/container/devcontainers%2F${{ matrix.image }}/visibility \
+            -f visibility=public || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-infra-base:
     if: github.event_name == 'push' || inputs.layer == 'all' || inputs.layer == 'infra'
@@ -158,6 +172,13 @@ jobs:
           build-contexts: |
             base-system:latest=docker-image://${{ env.IMAGE_PREFIX }}/base-system:latest
 
+      - name: Make package public
+        run: |
+          gh api --method PUT /orgs/${{ github.repository_owner }}/packages/container/devcontainers%2F${{ matrix.image }}/visibility \
+            -f visibility=public || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-infra-rust:
     if: github.event_name == 'push' || inputs.layer == 'all' || inputs.layer == 'infra'
     needs: build-intermediate
@@ -209,6 +230,13 @@ jobs:
           build-contexts: |
             rust:latest=docker-image://${{ env.IMAGE_PREFIX }}/rust:latest
 
+      - name: Make package public
+        run: |
+          gh api --method PUT /orgs/${{ github.repository_owner }}/packages/container/devcontainers%2F${{ matrix.image }}/visibility \
+            -f visibility=public || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-infra-go:
     if: github.event_name == 'push' || inputs.layer == 'all' || inputs.layer == 'infra'
     needs: build-intermediate
@@ -249,3 +277,10 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           build-contexts: |
             go:latest=docker-image://${{ env.IMAGE_PREFIX }}/go:latest
+
+      - name: Make package public
+        run: |
+          gh api --method PUT /orgs/${{ github.repository_owner }}/packages/container/devcontainers%2F${{ matrix.image }}/visibility \
+            -f visibility=public || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
