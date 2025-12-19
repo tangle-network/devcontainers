@@ -3,37 +3,115 @@
         "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\nUSER project\n\nLABEL description=\"Rust intermediate layer\"\n"
     },
     "projects": {
-        "coinbase": {
-            "base": "base-system",
-            "packages": {
-                "npm": ["@coinbase/coinbase-sdk"]
-            }
-        },
-        "injective": {
-            "base": "base-system",
-            "packages": {
-                "npm": ["@injectivelabs/sdk-ts", "@injectivelabs/networks"]
-            }
-        },
-        "succinct": {
+        "aptos": {
             "base": "rust",
             "packages": {
                 "cargo": []
             },
             "custom_install": {
                 "env": {
-                    "PATH": "/root/.sp1/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                    "PATH": "/root/.local/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "apt_packages": [
+                    "python3-pip"
+                ],
+                "root_commands": [
+                    "cargo install --git https://github.com/aptos-labs/aptos-core.git aptos --locked",
+                    "aptos --version || echo 'Aptos CLI installed'"
+                ]
+            }
+        },
+        "coinbase": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "@coinbase/coinbase-sdk"
+                ]
+            }
+        },
+        "coinbase-developer-platform-typescript": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "@aave/core-v3",
+                    "@aave/deploy-v3",
+                    "@coinbase/coinbase-sdk",
+                    "@ethereumjs/common",
+                    "@radix-ui/react-icons",
+                    "@radix-ui/react-slot",
+                    "@shadcn/ui",
+                    "@vercel/analytics",
+                    "@vercel/edge",
+                    "bluebird",
+                    "class-variance-authority",
+                    "clsx",
+                    "dotenv",
+                    "eth-sig-util",
+                    "ethereumjs-tx",
+                    "ethereumjs-util",
+                    "ethers",
+                    "json5",
+                    "jsondiffpatch",
+                    "lucide-react",
+                    "next",
+                    "react",
+                    "react-dom",
+                    "react-icons",
+                    "tailwind-merge",
+                    "tailwindcss-animate",
+                    "viem"
+                ]
+            }
+        },
+        "ethereum": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "ethers",
+                    "viem",
+                    "@wagmi/core"
+                ]
+            }
+        },
+        "injective": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "@injectivelabs/sdk-ts",
+                    "@injectivelabs/networks"
+                ]
+            }
+        },
+        "polygon": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "ethers",
+                    "viem"
+                ]
+            }
+        },
+        "reth": {
+            "base": "rust",
+            "packages": {
+                "cargo": []
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
                 },
                 "root_commands": [
-                    "curl -L https://sp1.succinct.xyz | bash",
-                    "if [ -f /root/.sp1/bin/sp1up ]; then /root/.sp1/bin/sp1up; cargo prove --version; else echo 'SP1 not installed'; fi"
+                    "cargo install --git https://github.com/paradigmxyz/reth.git --locked reth",
+                    "reth --version"
                 ]
             }
         },
         "risc0": {
             "base": "rust",
             "packages": {
-                "cargo": ["cargo-risczero"]
+                "cargo": [
+                    "cargo-risczero"
+                ]
             },
             "custom_install": {
                 "env": {
@@ -42,25 +120,6 @@
                 "root_commands": [
                     "cargo risczero install || echo 'RISC Zero toolchain installed'"
                 ]
-            }
-        },
-
-        "ethereum": {
-            "base": "base-system",
-            "packages": {
-                "npm": ["ethers", "viem", "@wagmi/core"]
-            }
-        },
-        "polygon": {
-            "base": "base-system",
-            "packages": {
-                "npm": ["ethers", "viem"]
-            }
-        },
-        "zksync": {
-            "base": "base-system",
-            "packages": {
-                "npm": ["zksync-ethers", "ethers", "zksync-cli"]
             }
         },
         "solana": {
@@ -79,6 +138,29 @@
                 ]
             }
         },
+        "stylus": {
+            "base": "rust",
+            "packages": {
+                "cargo": [
+                    "cargo-stylus"
+                ]
+            }
+        },
+        "succinct": {
+            "base": "rust",
+            "packages": {
+                "cargo": []
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.sp1/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "curl -L https://sp1.succinct.xyz | bash",
+                    "if [ -f /root/.sp1/bin/sp1up ]; then /root/.sp1/bin/sp1up; cargo prove --version; else echo 'SP1 not installed'; fi"
+                ]
+            }
+        },
         "sui": {
             "base": "rust",
             "packages": {
@@ -93,48 +175,14 @@
                 ]
             }
         },
-        "aptos": {
-            "base": "rust",
-            "packages": {
-                "cargo": []
-            },
-            "custom_install": {
-                "env": {
-                    "PATH": "/root/.local/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
-                },
-                "apt_packages": ["python3-pip"],
-                "root_commands": [
-                    "cargo install --git https://github.com/aptos-labs/aptos-core.git aptos --locked",
-                    "aptos --version || echo 'Aptos CLI installed'"
-                ]
-            }
-        },
-        "stylus": {
-            "base": "rust",
-            "packages": {
-                "cargo": ["cargo-stylus"]
-            }
-        },
         "tangle": {
             "base": "rust",
             "packages": {
-                "cargo": ["subxt-cli@0.39.0"],
-                "npm": ["@tangle-network/tangle-substrate-types"]
-            }
-        },
-
-        "reth": {
-            "base": "rust",
-            "packages": {
-                "cargo": []
-            },
-            "custom_install": {
-                "env": {
-                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
-                },
-                "root_commands": [
-                    "cargo install --git https://github.com/paradigmxyz/reth.git --locked reth",
-                    "reth --version"
+                "cargo": [
+                    "subxt-cli@0.39.0"
+                ],
+                "npm": [
+                    "@tangle-network/tangle-substrate-types"
                 ]
             }
         },
@@ -181,6 +229,16 @@
                     "pip3 install --no-cache-dir poetry black mypy ruff pipx",
                     "su - project -c 'go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest'",
                     "su - project -c 'go install golang.org/x/tools/gopls@latest'"
+                ]
+            }
+        },
+        "zksync": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "zksync-ethers",
+                    "ethers",
+                    "zksync-cli"
                 ]
             }
         }
