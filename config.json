@@ -1,6 +1,9 @@
 {
     "intermediate_templates": {
-        "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\nUSER project\n\nLABEL description=\"Rust intermediate layer\"\n"
+        "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\nUSER project\n\nLABEL description=\"Rust intermediate layer\"\n",
+        "foundry": "FROM rust:latest\n\nENV PATH=/root/.foundry/bin:/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl -L https://foundry.paradigm.xyz | bash \\\n    && /root/.foundry/bin/foundryup \\\n    && chmod -R a+rx /root/.foundry\n\nUSER project\n\nLABEL description=\"Foundry intermediate layer (forge, cast, anvil, chisel)\"\n",
+        "cuda": "FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu24.04\n\nENV DEBIAN_FRONTEND=noninteractive \\\n    NODE_VERSION=22 \\\n    PYTHON_VERSION=3.12 \\\n    PATH=/usr/local/cuda/bin:$PATH \\\n    LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH\n\nRUN apt-get update && apt-get install -y --no-install-recommends \\\n    build-essential pkg-config libssl-dev curl wget git jq unzip ca-certificates gnupg \\\n    python3 python3-pip python3-venv python3-dev \\\n    && mkdir -p /etc/apt/keyrings \\\n    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \\\n    && echo \"deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_VERSION}.x nodistro main\" | tee /etc/apt/sources.list.d/nodesource.list \\\n    && apt-get update && apt-get install -y nodejs \\\n    && npm install -g pnpm yarn tsx \\\n    && rm -rf /var/lib/apt/lists/* \\\n    && useradd -m -s /bin/bash -u 1000 project \\\n    && echo 'project ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers \\\n    && mkdir -p /workspace && chown project:project /workspace\n\nWORKDIR /workspace\nUSER project\n\nLABEL description=\"CUDA intermediate layer (NVIDIA GPU support with cuDNN)\"\n",
+        "scientific-python": "FROM base-system:latest\n\nUSER root\nRUN pip3 install --no-cache-dir --break-system-packages \\\n    numpy scipy pandas matplotlib seaborn plotly \\\n    scikit-learn scikit-image \\\n    jupyter jupyterlab ipython notebook \\\n    pillow opencv-python-headless \\\n    h5py pyarrow fastparquet \\\n    tqdm rich typer click \\\n    httpx aiohttp requests \\\n    pydantic pydantic-settings \\\n    python-dotenv PyYAML toml \\\n    && jupyter --version\n\nUSER project\n\nLABEL description=\"Scientific Python intermediate layer (NumPy, SciPy, Pandas, Jupyter, ML basics)\"\n"
     },
     "projects": {
         "coinbase": {
@@ -46,21 +49,31 @@
         },
 
         "ethereum": {
-            "base": "base-system",
+            "base": "foundry",
             "packages": {
-                "npm": ["ethers", "viem", "@wagmi/core"]
+                "npm": ["ethers", "viem", "@wagmi/core", "hardhat", "@nomicfoundation/hardhat-toolbox"]
             }
         },
         "polygon": {
-            "base": "base-system",
+            "base": "foundry",
             "packages": {
-                "npm": ["ethers", "viem"]
+                "npm": ["ethers", "viem", "hardhat"]
             }
         },
         "zksync": {
-            "base": "base-system",
+            "base": "rust",
             "packages": {
-                "npm": ["zksync-ethers", "ethers", "zksync-cli"]
+                "npm": ["zksync-ethers", "ethers", "zksync-cli", "hardhat", "@matterlabs/hardhat-zksync"]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.foundry-zksync/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "curl -L https://raw.githubusercontent.com/matter-labs/foundry-zksync/main/install-foundry-zksync | bash && /root/.foundry-zksync/bin/foundryup-zksync && chmod -R a+rx /root/.foundry-zksync",
+                    "curl -L https://raw.githubusercontent.com/matter-labs/anvil-zksync/main/scripts/install.sh | bash && chmod -R a+rx /root/.anvil-zksync || echo 'anvil-zksync installed'",
+                    "forge --version && cast --version || echo 'foundry-zksync installed'"
+                ]
             }
         },
         "solana": {
@@ -110,9 +123,14 @@
             }
         },
         "stylus": {
-            "base": "rust",
+            "base": "foundry",
             "packages": {
                 "cargo": ["cargo-stylus"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "rustup target add wasm32-unknown-unknown"
+                ]
             }
         },
         "tangle": {
@@ -136,6 +154,18 @@
                     "cargo install --git https://github.com/paradigmxyz/reth.git --locked reth",
                     "reth --version"
                 ]
+            }
+        },
+        "foundry": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox", "@nomicfoundation/hardhat-foundry"]
+            }
+        },
+        "hardhat": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["hardhat", "@nomicfoundation/hardhat-toolbox", "@nomicfoundation/hardhat-verify", "ethers", "viem"]
             }
         },
         "universal": {
@@ -181,6 +211,569 @@
                     "pip3 install --no-cache-dir poetry black mypy ruff pipx",
                     "su - project -c 'go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest'",
                     "su - project -c 'go install golang.org/x/tools/gopls@latest'"
+                ]
+            }
+        },
+
+        "arbitrum": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["@arbitrum/sdk", "ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+            }
+        },
+
+        "optimism": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["@eth-optimism/sdk", "@eth-optimism/core-utils", "ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "npm install -g @eth-optimism/supersim || echo 'Supersim installed for local OP Stack testing'"
+                ]
+            }
+        },
+
+        "gelato": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["@gelatonetwork/automate-sdk", "@gelatonetwork/relay-sdk", "@gelatonetwork/web3-functions-sdk", "ethers", "viem", "hardhat"]
+            }
+        },
+
+        "hyperlane": {
+            "base": "rust",
+            "packages": {
+                "npm": ["@hyperlane-xyz/sdk", "@hyperlane-xyz/core", "@hyperlane-xyz/utils", "@hyperlane-xyz/cli", "ethers", "viem"]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.foundry/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "curl -L https://foundry.paradigm.xyz | bash && /root/.foundry/bin/foundryup && chmod -R a+rx /root/.foundry",
+                    "git clone --depth 1 https://github.com/hyperlane-xyz/hyperlane-monorepo.git /tmp/hyperlane && cd /tmp/hyperlane/rust && cargo build --release --bin validator --bin relayer && cp target/release/validator target/release/relayer /usr/local/bin/ && chmod +x /usr/local/bin/validator /usr/local/bin/relayer && rm -rf /tmp/hyperlane",
+                    "validator --help || echo 'Hyperlane validator installed'",
+                    "relayer --help || echo 'Hyperlane relayer installed'"
+                ]
+            }
+        },
+
+        "gnosis": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["@safe-global/protocol-kit", "@safe-global/api-kit", "@safe-global/safe-core-sdk-types", "@gnosis.pm/zodiac", "@gnosis.pm/safe-deployments", "ethers", "viem", "hardhat"]
+            }
+        },
+
+        "hyperliquid": {
+            "base": "rust",
+            "packages": {
+                "npm": ["ethers", "viem"]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "pip3 install --no-cache-dir hyperliquid-python-sdk",
+                    "mkdir -p /root/bin && curl -sSL https://binaries.hyperliquid.xyz/Testnet/hl-visor -o /root/bin/hl-visor && chmod +x /root/bin/hl-visor",
+                    "git clone --depth 1 https://github.com/hyperliquid-dex/node.git /opt/hyperliquid-node && chmod -R a+r /opt/hyperliquid-node",
+                    "/root/bin/hl-visor --help || echo 'Hyperliquid visor installed'"
+                ]
+            }
+        },
+
+        "lifi": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["@lifi/sdk", "@lifi/types", "@lifi/wallet-management", "ethers", "viem", "hardhat"]
+            }
+        },
+
+        "linea": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["@consensys/linea-sdk", "ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+            }
+        },
+
+        "mongodb": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["mongodb", "mongoose", "@types/mongoose", "mongosh"]
+            },
+            "custom_install": {
+                "apt_packages": ["gnupg"],
+                "root_commands": [
+                    "curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg",
+                    "echo 'deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/7.0 multiverse' | tee /etc/apt/sources.list.d/mongodb-org-7.0.list",
+                    "apt-get update && apt-get install -y mongodb-org && rm -rf /var/lib/apt/lists/*",
+                    "mkdir -p /data/db && chmod 777 /data/db",
+                    "mongod --version"
+                ]
+            }
+        },
+
+        "openzeppelin": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["@openzeppelin/contracts", "@openzeppelin/contracts-upgradeable", "@openzeppelin/upgrades-core", "@openzeppelin/defender-sdk", "@openzeppelin/hardhat-upgrades", "@openzeppelin/wizard", "hardhat", "ethers"]
+            }
+        },
+
+        "polymer": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["@open-ibc/vibc-core-smart-contracts", "ethers", "viem", "hardhat"]
+            }
+        },
+
+        "soneium": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["ethers", "viem", "@wagmi/core", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+            }
+        },
+
+        "starknet": {
+            "base": "rust",
+            "packages": {
+                "npm": ["starknet", "get-starknet", "@starknet-io/types-js"]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.local/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh",
+                    "curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh",
+                    "if [ -f /root/.local/bin/snfoundryup ]; then /root/.local/bin/snfoundryup; fi",
+                    "pip3 install --no-cache-dir cairo-lang starknet-py"
+                ]
+            }
+        },
+
+        "chainlink": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["@chainlink/contracts", "@chainlink/functions-toolkit", "@chainlink/local", "ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+            }
+        },
+
+        "tempo": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.tempo/bin:/root/.foundry/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "git clone --depth 1 https://github.com/tempoxyz/tempo.git /tmp/tempo && cd /tmp/tempo && cargo build --release && mkdir -p /root/.tempo/bin && cp target/release/tempo* /root/.tempo/bin/ 2>/dev/null || echo 'Tempo binaries copied' && chmod -R a+rx /root/.tempo && rm -rf /tmp/tempo",
+                    "echo 'Tempo node built from https://github.com/tempoxyz/tempo'"
+                ]
+            }
+        },
+
+        "near": {
+            "base": "rust",
+            "packages": {
+                "npm": ["near-cli", "near-api-js", "@near-js/client", "near-seed-phrase"]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "cargo install cargo-near",
+                    "rustup target add wasm32-unknown-unknown",
+                    "cargo near --version || echo 'cargo-near installed'"
+                ]
+            }
+        },
+
+        "ton": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["@ton/core", "@ton/crypto", "@ton/ton", "@ton/blueprint", "@tact-lang/compiler", "ton-access"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "npm install -g @ton-community/func-js",
+                    "pip3 install --no-cache-dir toncli || echo 'toncli installed'"
+                ]
+            }
+        },
+
+        "monad": {
+            "base": "foundry",
+            "packages": {
+                "npm": ["ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+            }
+        },
+
+        "pytorch-gpu": {
+            "base": "cuda",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124",
+                    "pip3 install --no-cache-dir numpy scipy pandas matplotlib seaborn scikit-learn jupyter jupyterlab",
+                    "python3 -c 'import torch; print(f\"PyTorch {torch.__version__}, CUDA available: {torch.cuda.is_available()}\")'"
+                ]
+            }
+        },
+
+        "pytorch-cpu": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu",
+                    "python3 -c 'import torch; print(f\"PyTorch {torch.__version__} (CPU)\")'"
+                ]
+            }
+        },
+
+        "tensorflow-gpu": {
+            "base": "cuda",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir tensorflow[and-cuda] keras",
+                    "pip3 install --no-cache-dir numpy scipy pandas matplotlib seaborn scikit-learn jupyter jupyterlab",
+                    "python3 -c 'import tensorflow as tf; print(f\"TensorFlow {tf.__version__}, GPU: {len(tf.config.list_physical_devices(\"GPU\"))} devices\")'"
+                ]
+            }
+        },
+
+        "tensorflow-cpu": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages tensorflow-cpu keras",
+                    "python3 -c 'import tensorflow as tf; print(f\"TensorFlow {tf.__version__} (CPU)\")'"
+                ]
+            }
+        },
+
+        "huggingface-gpu": {
+            "base": "cuda",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124",
+                    "pip3 install --no-cache-dir transformers datasets tokenizers accelerate peft diffusers safetensors huggingface_hub",
+                    "pip3 install --no-cache-dir bitsandbytes sentencepiece protobuf",
+                    "pip3 install --no-cache-dir numpy scipy pandas matplotlib seaborn scikit-learn jupyter jupyterlab",
+                    "python3 -c 'import transformers; print(f\"Transformers {transformers.__version__}\")'"
+                ]
+            }
+        },
+
+        "huggingface-cpu": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu",
+                    "pip3 install --no-cache-dir --break-system-packages transformers datasets tokenizers accelerate peft diffusers safetensors huggingface_hub",
+                    "pip3 install --no-cache-dir --break-system-packages sentencepiece protobuf",
+                    "python3 -c 'import transformers; print(f\"Transformers {transformers.__version__}\")'"
+                ]
+            }
+        },
+
+        "langchain": {
+            "base": "scientific-python",
+            "packages": {
+                "npm": ["langchain", "@langchain/core", "@langchain/openai", "@langchain/anthropic", "@langchain/community"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages langchain langchain-core langchain-community langchain-openai langchain-anthropic",
+                    "pip3 install --no-cache-dir --break-system-packages langgraph langsmith langserve",
+                    "pip3 install --no-cache-dir --break-system-packages chromadb faiss-cpu sentence-transformers",
+                    "python3 -c 'import langchain; print(f\"LangChain {langchain.__version__}\")'"
+                ]
+            }
+        },
+
+        "llamaindex": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages llama-index",
+                    "pip3 install --no-cache-dir --break-system-packages llama-index-llms-openai llama-index-llms-anthropic llama-index-llms-ollama",
+                    "pip3 install --no-cache-dir --break-system-packages llama-index-embeddings-openai llama-index-embeddings-huggingface",
+                    "pip3 install --no-cache-dir --break-system-packages llama-index-vector-stores-chroma llama-index-vector-stores-qdrant",
+                    "pip3 install --no-cache-dir --break-system-packages chromadb sentence-transformers",
+                    "python3 -c 'import llama_index; print(f\"LlamaIndex installed\")'"
+                ]
+            }
+        },
+
+        "vllm-gpu": {
+            "base": "cuda",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir vllm",
+                    "pip3 install --no-cache-dir openai numpy scipy pandas",
+                    "python3 -c 'import vllm; print(f\"vLLM {vllm.__version__}\")'"
+                ]
+            }
+        },
+
+        "vllm-cpu": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages vllm --extra-index-url https://download.pytorch.org/whl/cpu || echo 'vLLM CPU build may have limited support'",
+                    "pip3 install --no-cache-dir --break-system-packages openai",
+                    "echo 'vLLM CPU installed (limited functionality compared to GPU version)'"
+                ]
+            }
+        },
+
+        "ollama": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["ollama", "ollama-js"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "curl -fsSL https://ollama.ai/install.sh | sh",
+                    "ollama --version || echo 'Ollama installed'"
+                ]
+            }
+        },
+
+        "jupyter": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages jupyterlab-git jupyterlab-lsp python-lsp-server[all]",
+                    "pip3 install --no-cache-dir --break-system-packages nbconvert nbformat papermill",
+                    "pip3 install --no-cache-dir --break-system-packages ipywidgets plotly bokeh altair",
+                    "jupyter lab --version"
+                ]
+            }
+        },
+
+        "mlops": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages mlflow wandb",
+                    "pip3 install --no-cache-dir --break-system-packages optuna ray[tune]",
+                    "pip3 install --no-cache-dir --break-system-packages dvc great-expectations",
+                    "pip3 install --no-cache-dir --break-system-packages onnx onnxruntime",
+                    "mlflow --version && wandb --version"
+                ]
+            }
+        },
+
+        "qdrant": {
+            "base": "rust",
+            "packages": {
+                "npm": ["@qdrant/js-client-rest"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir qdrant-client",
+                    "cargo install qdrant || (curl -sSL https://github.com/qdrant/qdrant/releases/latest/download/qdrant-x86_64-unknown-linux-gnu.tar.gz | tar -xz -C /usr/local/bin || echo 'Qdrant binary installation')",
+                    "qdrant --version || echo 'Qdrant installed'"
+                ]
+            }
+        },
+
+        "chromadb": {
+            "base": "scientific-python",
+            "packages": {
+                "npm": ["chromadb", "chromadb-default-embed"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages chromadb sentence-transformers",
+                    "python3 -c 'import chromadb; print(f\"ChromaDB {chromadb.__version__}\")'"
+                ]
+            }
+        },
+
+        "pgvector": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["pg", "pgvector", "@types/pg"]
+            },
+            "custom_install": {
+                "apt_packages": ["postgresql", "postgresql-contrib", "libpq-dev"],
+                "root_commands": [
+                    "apt-get update && apt-get install -y postgresql-16-pgvector && rm -rf /var/lib/apt/lists/*",
+                    "pip3 install --no-cache-dir pgvector psycopg2-binary sqlalchemy",
+                    "echo 'PostgreSQL with pgvector extension installed'"
+                ]
+            }
+        },
+
+        "milvus": {
+            "base": "base-system",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir pymilvus",
+                    "curl -sSL https://raw.githubusercontent.com/milvus-io/milvus/master/scripts/standalone_embed.sh -o /usr/local/bin/milvus-standalone.sh && chmod +x /usr/local/bin/milvus-standalone.sh",
+                    "python3 -c 'from pymilvus import connections; print(\"PyMilvus installed\")'"
+                ]
+            }
+        },
+
+        "weaviate": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["weaviate-ts-client", "weaviate-client"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir weaviate-client",
+                    "python3 -c 'import weaviate; print(f\"Weaviate client {weaviate.__version__}\")'"
+                ]
+            }
+        },
+
+        "redis": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["redis", "ioredis", "@redis/client"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "apt-get update && apt-get install -y redis-server && rm -rf /var/lib/apt/lists/*",
+                    "pip3 install --no-cache-dir redis hiredis",
+                    "redis-server --version"
+                ]
+            }
+        },
+
+        "kafka": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["kafkajs", "@confluentinc/kafka-javascript"]
+            },
+            "custom_install": {
+                "apt_packages": ["default-jdk"],
+                "root_commands": [
+                    "curl -sSL https://downloads.apache.org/kafka/3.7.0/kafka_2.13-3.7.0.tgz | tar -xz -C /opt",
+                    "ln -s /opt/kafka_2.13-3.7.0 /opt/kafka",
+                    "chmod -R a+rx /opt/kafka",
+                    "pip3 install --no-cache-dir kafka-python confluent-kafka",
+                    "echo 'export PATH=$PATH:/opt/kafka/bin' >> /etc/profile.d/kafka.sh",
+                    "/opt/kafka/bin/kafka-topics.sh --version || echo 'Kafka installed'"
+                ]
+            }
+        },
+
+        "elasticsearch": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["@elastic/elasticsearch", "elasticsearch"]
+            },
+            "custom_install": {
+                "apt_packages": ["default-jdk"],
+                "root_commands": [
+                    "curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg",
+                    "echo 'deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main' | tee /etc/apt/sources.list.d/elastic-8.x.list",
+                    "apt-get update && apt-get install -y elasticsearch && rm -rf /var/lib/apt/lists/*",
+                    "pip3 install --no-cache-dir elasticsearch",
+                    "echo 'Elasticsearch installed (run with: systemctl start elasticsearch)'"
+                ]
+            }
+        },
+
+        "clickhouse": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["@clickhouse/client"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "curl -fsSL https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key | gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg",
+                    "echo 'deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main' | tee /etc/apt/sources.list.d/clickhouse.list",
+                    "apt-get update && apt-get install -y clickhouse-server clickhouse-client && rm -rf /var/lib/apt/lists/*",
+                    "pip3 install --no-cache-dir clickhouse-connect clickhouse-driver",
+                    "clickhouse-client --version"
+                ]
+            }
+        },
+
+        "minio": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["minio", "@aws-sdk/client-s3"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "curl -sSL https://dl.min.io/server/minio/release/linux-amd64/minio -o /usr/local/bin/minio && chmod +x /usr/local/bin/minio",
+                    "curl -sSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc && chmod +x /usr/local/bin/mc",
+                    "pip3 install --no-cache-dir minio boto3",
+                    "minio --version && mc --version"
+                ]
+            }
+        },
+
+        "kubernetes": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["@kubernetes/client-node"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\" && install kubectl /usr/local/bin/kubectl && rm kubectl",
+                    "curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash",
+                    "curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64 && chmod +x /usr/local/bin/kind",
+                    "curl -Lo /usr/local/bin/k9s.tar.gz https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_amd64.tar.gz && tar -xzf /usr/local/bin/k9s.tar.gz -C /usr/local/bin k9s && rm /usr/local/bin/k9s.tar.gz",
+                    "curl -Lo /usr/local/bin/kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/latest/download/kustomize_v5.4.1_linux_amd64.tar.gz && tar -xzf /usr/local/bin/kustomize.tar.gz -C /usr/local/bin && rm /usr/local/bin/kustomize.tar.gz",
+                    "pip3 install --no-cache-dir kubernetes",
+                    "kubectl version --client && helm version && kind version && k9s version"
+                ]
+            }
+        },
+
+        "terraform": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["cdktf-cli", "@cdktf/provider-aws", "@cdktf/provider-google"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg",
+                    "echo 'deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com noble main' | tee /etc/apt/sources.list.d/hashicorp.list",
+                    "apt-get update && apt-get install -y terraform && rm -rf /var/lib/apt/lists/*",
+                    "curl -sSL https://get.opentofu.org/install-opentofu.sh | bash -s -- --install-method deb",
+                    "pip3 install --no-cache-dir python-terraform",
+                    "terraform version && tofu version"
+                ]
+            }
+        },
+
+        "pulumi": {
+            "base": "base-system",
+            "packages": {
+                "npm": ["@pulumi/pulumi", "@pulumi/aws", "@pulumi/gcp", "@pulumi/azure-native", "@pulumi/kubernetes"]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "curl -fsSL https://get.pulumi.com | sh",
+                    "mv /root/.pulumi/bin/* /usr/local/bin/",
+                    "pip3 install --no-cache-dir pulumi pulumi-aws pulumi-gcp pulumi-kubernetes",
+                    "pulumi version"
                 ]
             }
         }
