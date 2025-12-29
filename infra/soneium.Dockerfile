@@ -4,4 +4,4 @@ USER root
 RUN npm install -g ethers viem @wagmi/core hardhat @nomicfoundation/hardhat-toolbox
 USER project
 
-LABEL description="ethereum infrastructure layer"
+LABEL description="soneium infrastructure layer"

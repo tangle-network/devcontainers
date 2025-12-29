@@ -1,11 +1,7 @@
-FROM rust:latest
-
-ENV     PATH=/root/.foundry/bin:/usr/local/cargo/bin:$PATH
+FROM foundry:latest
 
 USER root
-RUN curl -L https://foundry.paradigm.xyz | bash && \
-    if [ -f /root/.foundry/bin/foundryup ]; then /root/.foundry/bin/foundryup; else echo 'Foundry not installed'; fi
-
+RUN npm install -g ethers viem hardhat @nomicfoundation/hardhat-toolbox @nomicfoundation/hardhat-foundry
 USER project
 
 LABEL description="foundry infrastructure layer"
