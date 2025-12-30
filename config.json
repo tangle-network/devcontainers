@@ -2,7 +2,6 @@
     "intermediate_templates": {
         "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\nUSER project\n\nLABEL description=\"Rust intermediate layer\"\n",
         "foundry": "FROM rust:latest\n\nENV PATH=/root/.foundry/bin:/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl -L https://foundry.paradigm.xyz | bash \\\n    && /root/.foundry/bin/foundryup \\\n    && chmod -R a+rx /root/.foundry\n\nUSER project\n\nLABEL description=\"Foundry intermediate layer (forge, cast, anvil, chisel)\"\n",
-        "cuda": "FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu24.04\n\nENV DEBIAN_FRONTEND=noninteractive \\\n    NODE_VERSION=22 \\\n    PYTHON_VERSION=3.12 \\\n    PATH=/usr/local/cuda/bin:$PATH \\\n    LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH\n\nRUN apt-get update && apt-get install -y --no-install-recommends \\\n    build-essential pkg-config libssl-dev curl wget git jq unzip ca-certificates gnupg \\\n    python3 python3-pip python3-venv python3-dev \\\n    && mkdir -p /etc/apt/keyrings \\\n    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \\\n    && echo \"deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_VERSION}.x nodistro main\" | tee /etc/apt/sources.list.d/nodesource.list \\\n    && apt-get update && apt-get install -y nodejs \\\n    && npm install -g pnpm yarn tsx \\\n    && rm -rf /var/lib/apt/lists/* \\\n    && useradd -m -s /bin/bash -u 1000 project \\\n    && echo 'project ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers \\\n    && mkdir -p /workspace && chown project:project /workspace\n\nWORKDIR /workspace\nUSER project\n\nLABEL description=\"CUDA intermediate layer (NVIDIA GPU support with cuDNN)\"\n",
         "scientific-python": "FROM base-system:latest\n\nUSER root\nRUN pip3 install --no-cache-dir --break-system-packages \\\n    numpy scipy pandas matplotlib seaborn plotly \\\n    scikit-learn scikit-image \\\n    jupyter jupyterlab ipython notebook \\\n    pillow opencv-python-headless \\\n    h5py pyarrow fastparquet \\\n    tqdm rich typer click \\\n    httpx aiohttp requests \\\n    pydantic pydantic-settings \\\n    python-dotenv PyYAML toml \\\n    && jupyter --version\n\nUSER project\n\nLABEL description=\"Scientific Python intermediate layer (NumPy, SciPy, Pandas, Jupyter, ML basics)\"\n"
     },
     "projects": {
@@ -414,18 +413,6 @@
             }
         },
 
-        "pytorch-gpu": {
-            "base": "cuda",
-            "packages": {},
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124",
-                    "pip3 install --no-cache-dir numpy scipy pandas matplotlib seaborn scikit-learn jupyter jupyterlab",
-                    "python3 -c 'import torch; print(f\"PyTorch {torch.__version__}, CUDA available: {torch.cuda.is_available()}\")'"
-                ]
-            }
-        },
-
         "pytorch-cpu": {
             "base": "scientific-python",
             "packages": {},
@@ -437,18 +424,6 @@
             }
         },
 
-        "tensorflow-gpu": {
-            "base": "cuda",
-            "packages": {},
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir tensorflow[and-cuda] keras",
-                    "pip3 install --no-cache-dir numpy scipy pandas matplotlib seaborn scikit-learn jupyter jupyterlab",
-                    "python3 -c 'import tensorflow as tf; print(f\"TensorFlow {tf.__version__}, GPU: {len(tf.config.list_physical_devices(\"GPU\"))} devices\")'"
-                ]
-            }
-        },
-
         "tensorflow-cpu": {
             "base": "scientific-python",
             "packages": {},
@@ -456,20 +431,6 @@
                 "root_commands": [
                     "pip3 install --no-cache-dir --break-system-packages tensorflow-cpu keras",
                     "python3 -c 'import tensorflow as tf; print(f\"TensorFlow {tf.__version__} (CPU)\")'"
-                ]
-            }
-        },
-
-        "huggingface-gpu": {
-            "base": "cuda",
-            "packages": {},
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124",
-                    "pip3 install --no-cache-dir transformers datasets tokenizers accelerate peft diffusers safetensors huggingface_hub",
-                    "pip3 install --no-cache-dir bitsandbytes sentencepiece protobuf",
-                    "pip3 install --no-cache-dir numpy scipy pandas matplotlib seaborn scikit-learn jupyter jupyterlab",
-                    "python3 -c 'import transformers; print(f\"Transformers {transformers.__version__}\")'"
                 ]
             }
         },
@@ -513,18 +474,6 @@
                     "pip3 install --no-cache-dir --break-system-packages llama-index-vector-stores-chroma llama-index-vector-stores-qdrant",
                     "pip3 install --no-cache-dir --break-system-packages chromadb sentence-transformers",
                     "python3 -c 'import llama_index; print(f\"LlamaIndex installed\")'"
-                ]
-            }
-        },
-
-        "vllm-gpu": {
-            "base": "cuda",
-            "packages": {},
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir vllm",
-                    "pip3 install --no-cache-dir openai numpy scipy pandas",
-                    "python3 -c 'import vllm; print(f\"vLLM {vllm.__version__}\")'"
                 ]
             }
         },
