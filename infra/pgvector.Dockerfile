@@ -10,7 +10,7 @@ USER project
 
 USER root
 RUN apt-get update && apt-get install -y postgresql-16-pgvector && rm -rf /var/lib/apt/lists/* && \
-    pip3 install --no-cache-dir pgvector psycopg2-binary sqlalchemy && \
+    pip3 install --no-cache-dir --break-system-packages pgvector psycopg2-binary sqlalchemy && \
     echo 'PostgreSQL with pgvector extension installed'
 
 USER project

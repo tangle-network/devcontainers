@@ -1,12 +1,11 @@
 FROM rust:latest
 
-ENV     PATH=/root/.cargo/bin:/usr/local/cargo/bin:$PATH
+ENV PATH=/root/.risc0/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH
 
 USER root
-RUN cargo risczero install || echo 'RISC Zero toolchain installed'
+RUN cargo install cargo-risczero && \
+    cargo risczero install || echo 'RISC Zero toolchain installed'
 
 USER project
-
-RUN cargo install cargo-risczero
 
 LABEL description="risc0 infrastructure layer"

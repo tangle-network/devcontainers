@@ -1,9 +1,8 @@
 FROM scientific-python:latest
 
 USER root
-RUN pip3 install --no-cache-dir --break-system-packages vllm --extra-index-url https://download.pytorch.org/whl/cpu || echo 'vLLM CPU build may have limited support' && \
-    pip3 install --no-cache-dir --break-system-packages openai && \
-    echo 'vLLM CPU installed (limited functionality compared to GPU version)'
+RUN pip3 install --no-cache-dir --break-system-packages openai transformers accelerate && \
+    echo 'vLLM CPU dependencies installed (use vllm-gpu for full vLLM support)'
 
 USER project
 
