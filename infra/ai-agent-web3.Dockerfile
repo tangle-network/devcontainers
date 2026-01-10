@@ -7,8 +7,6 @@ RUN pip3 install --no-cache-dir --break-system-packages langchain langchain-core
     pip3 install --no-cache-dir --break-system-packages chromadb sentence-transformers && \
     python3 -c 'import langchain; import web3; print(f"LangChain {langchain.__version__}, Web3.py installed")'
 
-USER project
-
 USER root
 RUN npm install -g @coinbase/agentkit @coinbase/cdp-sdk @x402/fetch @xmtp/xmtp-js viem wagmi langchain @langchain/core @langchain/openai @langchain/anthropic
 USER project

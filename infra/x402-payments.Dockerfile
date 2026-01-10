@@ -18,8 +18,6 @@ RUN mkdir -p /home/project/.x402-dev/scripts && \
     chmod +x /home/project/.x402-dev/*.sh /home/project/.x402-dev/scripts/*.sh && \
     chown -R project:project /home/project/.x402-dev
 
-USER project
-
 USER root
 RUN npm install -g @coinbase/x402 @x402/fetch @x402/axios @x402/express @x402/hono @x402/core @x402/evm @coinbase/cdp-sdk @coinbase/wallet-sdk viem wagmi ethers hono express localtunnel
 USER project
