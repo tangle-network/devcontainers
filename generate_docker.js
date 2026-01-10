@@ -13,6 +13,47 @@ const config = loadConfig();
 const PROJECT_CONFIGS = config.projects;
 const INTERMEDIATE_TEMPLATES = config.intermediate_templates;
 
+/**
+ * Generate cache warming commands for a project
+ * @param {Object} cacheWarm - The cache_warm configuration object
+ * @returns {string} Dockerfile RUN commands for cache warming
+ */
+function generateCacheWarmCommands(cacheWarm) {
+    if (!cacheWarm) return '';
+
+    const commands = [];
+
+    // NPM cache warming
+    if (cacheWarm.npm && cacheWarm.npm.length > 0) {
+        commands.push(`# Pre-warm npm cache with project-specific packages`);
+        commands.push(`RUN npm cache add ${cacheWarm.npm.join(' ')}`);
+    }
+
+    // Cargo cache warming (fetch crates without building)
+    if (cacheWarm.cargo && cacheWarm.cargo.length > 0) {
+        // Create a temporary Cargo.toml to fetch dependencies
+        const deps = cacheWarm.cargo.map(crate => {
+            const [name, version] = crate.split('@');
+            return `${name} = "${version || '*'}"`;
+        }).join('\\n');
+
+        commands.push(`# Pre-warm cargo cache with project-specific crates`);
+        commands.push(`RUN mkdir -p /tmp/cargo-warm && \\`);
+        commands.push(`    printf '[package]\\nname = "warm"\\nversion = "0.0.0"\\nedition = "2021"\\n\\n[dependencies]\\n${deps}\\n' > /tmp/cargo-warm/Cargo.toml && \\`);
+        commands.push(`    mkdir -p /tmp/cargo-warm/src && echo 'fn main() {}' > /tmp/cargo-warm/src/main.rs && \\`);
+        commands.push(`    cd /tmp/cargo-warm && cargo fetch && \\`);
+        commands.push(`    rm -rf /tmp/cargo-warm`);
+    }
+
+    // pip cache warming
+    if (cacheWarm.pip && cacheWarm.pip.length > 0) {
+        commands.push(`# Pre-warm pip cache with project-specific packages`);
+        commands.push(`RUN pip download --dest /tmp/pip-warm ${cacheWarm.pip.join(' ')} && rm -rf /tmp/pip-warm`);
+    }
+
+    return commands.length > 0 ? '\n' + commands.join('\n') + '\n' : '';
+}
+
 function generateIntermediateDockerfile(base, outputDir) {
     if (!(base in INTERMEDIATE_TEMPLATES)) {
         throw new Error(`Unknown base: ${base}`);
@@ -72,13 +113,18 @@ function generateInfraDockerfile(project, config, outputDir) {
     
     if (packages.cargo && packages.cargo.length > 0) {
         for (const pkg of packages.cargo) {
-            const cargoCmd = pkg.includes('@') 
+            const cargoCmd = pkg.includes('@')
                 ? `cargo install ${pkg.split('@')[0]} --version ${pkg.split('@')[1]}`
                 : `cargo install ${pkg}`;
             dockerfileLines.push(`\nRUN ${cargoCmd}\n`);
         }
     }
-    
+
+    // Cache warming (pre-fetch packages without installing)
+    if (config.cache_warm) {
+        dockerfileLines.push(generateCacheWarmCommands(config.cache_warm));
+    }
+
     dockerfileLines.push(`\nLABEL description="${project} infrastructure layer"\n`);
     
     const filepath = path.join(outputDir, `${project}.Dockerfile`);
@@ -127,7 +173,8 @@ function generateCombinedDockerfile(projectNames, outputDir) {
     const allAptPackages = [];
     const allRootCommands = [];
     const allCommands = [];
-    
+    const allCacheWarm = { npm: [], cargo: [], pip: [] };
+
     for (const [name, config] of configs) {
         const packages = config.packages;
         if (packages.npm && packages.npm.length > 0) {
@@ -136,7 +183,7 @@ function generateCombinedDockerfile(projectNames, outputDir) {
         if (packages.cargo && packages.cargo.length > 0) {
             allCargoPackages.push(...packages.cargo);
         }
-        
+
         if (config.custom_install) {
             if (config.custom_install.env) {
                 Object.assign(allEnvVars, config.custom_install.env);
@@ -150,6 +197,13 @@ function generateCombinedDockerfile(projectNames, outputDir) {
             if (config.custom_install.commands) {
                 allCommands.push(...config.custom_install.commands);
             }
+        }
+
+        // Collect cache_warm configs
+        if (config.cache_warm) {
+            if (config.cache_warm.npm) allCacheWarm.npm.push(...config.cache_warm.npm);
+            if (config.cache_warm.cargo) allCacheWarm.cargo.push(...config.cache_warm.cargo);
+            if (config.cache_warm.pip) allCacheWarm.pip.push(...config.cache_warm.pip);
         }
     }
     
@@ -198,13 +252,24 @@ function generateCombinedDockerfile(projectNames, outputDir) {
     
     if (uniqueCargoPackages.length > 0) {
         for (const pkg of uniqueCargoPackages) {
-            const cargoCmd = pkg.includes('@') 
+            const cargoCmd = pkg.includes('@')
                 ? `cargo install ${pkg.split('@')[0]} --version ${pkg.split('@')[1]}`
                 : `cargo install ${pkg}`;
             dockerfileLines.push(`\nRUN ${cargoCmd}\n`);
         }
     }
-    
+
+    // Combined cache warming (deduplicated)
+    const mergedCacheWarm = {
+        npm: [...new Set(allCacheWarm.npm)],
+        cargo: [...new Set(allCacheWarm.cargo)],
+        pip: [...new Set(allCacheWarm.pip)]
+    };
+    const hasCacheWarm = mergedCacheWarm.npm.length > 0 || mergedCacheWarm.cargo.length > 0 || mergedCacheWarm.pip.length > 0;
+    if (hasCacheWarm) {
+        dockerfileLines.push(generateCacheWarmCommands(mergedCacheWarm));
+    }
+
     const projectsDesc = sortedProjectNames.join(', ');
     dockerfileLines.push(`\nLABEL description="Combined: ${projectsDesc}"\n`);
     
