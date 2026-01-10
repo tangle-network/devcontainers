@@ -20,6 +20,32 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && npm install -g opencode-ai \
     && rm -rf /var/lib/apt/lists/*
 
+# Pre-warm npm cache with commonly used packages
+# This populates the npm cache so first `npm install` for these packages is instant
+# These packages cover: React ecosystem, build tools, testing, styling, utilities
+RUN npm cache add \
+    # React ecosystem
+    react@latest react-dom@latest @types/react@latest @types/react-dom@latest \
+    next@latest @next/env@latest \
+    # Build & bundling
+    vite@latest @vitejs/plugin-react@latest esbuild@latest rollup@latest \
+    # TypeScript
+    typescript@latest @types/node@latest ts-node@latest \
+    # Testing
+    vitest@latest @vitest/ui@latest jest@latest @types/jest@latest \
+    # Styling
+    tailwindcss@latest postcss@latest autoprefixer@latest \
+    # Server frameworks
+    express@latest @types/express@latest fastify@latest hono@latest \
+    # Utilities
+    zod@latest dotenv@latest axios@latest lodash@latest @types/lodash@latest \
+    # Database/ORM
+    drizzle-orm@latest prisma@latest @prisma/client@latest \
+    # Linting & formatting
+    eslint@latest prettier@latest @typescript-eslint/parser@latest @typescript-eslint/eslint-plugin@latest \
+    # Monorepo tools
+    turbo@latest
+
 # Install Claude Code
 RUN curl -fsSL https://claude.ai/install.sh | bash
 

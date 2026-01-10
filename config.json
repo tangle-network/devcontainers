@@ -1,6 +1,6 @@
 {
     "intermediate_templates": {
-        "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\nUSER project\n\nLABEL description=\"Rust intermediate layer\"\n",
+        "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\n# Pre-warm cargo cache with commonly used crates\nRUN mkdir -p /tmp/cargo-warm && \\\n    printf '[package]\\nname = \"warm\"\\nversion = \"0.0.0\"\\nedition = \"2021\"\\n\\n[dependencies]\\ntokio = { version = \"1\", features = [\"full\"] }\\nserde = { version = \"1\", features = [\"derive\"] }\\nserde_json = \"1\"\\nthiserror = \"1\"\\nanyhow = \"1\"\\ntracing = \"0.1\"\\ntracing-subscriber = \"0.3\"\\nasync-trait = \"0.1\"\\nfutures = \"0.3\"\\nreqwest = { version = \"0.12\", features = [\"json\"] }\\nclap = { version = \"4\", features = [\"derive\"] }\\n' > /tmp/cargo-warm/Cargo.toml && \\\n    mkdir -p /tmp/cargo-warm/src && \\\n    echo 'fn main() {}' > /tmp/cargo-warm/src/main.rs && \\\n    cd /tmp/cargo-warm && cargo fetch && \\\n    rm -rf /tmp/cargo-warm && \\\n    chmod -R a+w $CARGO_HOME\n\nUSER project\n\nLABEL description=\"Rust intermediate layer\"\n",
         "foundry": "FROM rust:latest\n\nENV PATH=/root/.foundry/bin:/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl -L https://foundry.paradigm.xyz | bash \\\n    && /root/.foundry/bin/foundryup \\\n    && chmod -R a+rx /root/.foundry\n\nUSER project\n\nLABEL description=\"Foundry intermediate layer (forge, cast, anvil, chisel)\"\n",
         "scientific-python": "FROM base-system:latest\n\nUSER root\nRUN pip3 install --no-cache-dir --break-system-packages \\\n    numpy scipy pandas matplotlib seaborn plotly \\\n    scikit-learn scikit-image \\\n    jupyter jupyterlab ipython notebook \\\n    pillow opencv-python-headless \\\n    h5py pyarrow fastparquet \\\n    tqdm rich typer click \\\n    httpx aiohttp requests \\\n    pydantic pydantic-settings \\\n    python-dotenv PyYAML toml \\\n    && jupyter --version\n\nUSER project\n\nLABEL description=\"Scientific Python intermediate layer (NumPy, SciPy, Pandas, Jupyter, ML basics)\"\n"
     },
@@ -51,6 +51,15 @@
             "base": "foundry",
             "packages": {
                 "npm": ["ethers", "viem", "@wagmi/core", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+            },
+            "cache_warm": {
+                "npm": [
+                    "@openzeppelin/contracts@latest",
+                    "@openzeppelin/contracts-upgradeable@latest",
+                    "wagmi@latest",
+                    "@rainbow-me/rainbowkit@latest",
+                    "abitype@latest"
+                ]
             }
         },
         "polygon": {
@@ -88,6 +97,21 @@
                 "root_commands": [
                     "curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash || echo 'Solana installation may not support this architecture. Consider building from source.'",
                     "if [ -f /root/.local/share/solana/install/active_release/bin/solana ]; then /root/.local/share/solana/install/active_release/bin/solana --version && chmod -R a+rx /root/.local/share/solana; else echo 'Solana CLI not installed - platform may not be supported'; fi"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "@solana/web3.js@latest",
+                    "@coral-xyz/anchor@latest",
+                    "@solana/spl-token@latest",
+                    "@metaplex-foundation/js@latest",
+                    "@solana/wallet-adapter-base@latest",
+                    "@solana/wallet-adapter-react@latest"
+                ],
+                "cargo": [
+                    "solana-program@1",
+                    "anchor-lang@0.30",
+                    "spl-token@4"
                 ]
             }
         },
@@ -137,6 +161,14 @@
             "packages": {
                 "cargo": ["subxt-cli@0.39.0"],
                 "npm": ["@tangle-network/tangle-substrate-types"]
+            },
+            "cache_warm": {
+                "cargo": [
+                    "subxt@0.39",
+                    "sp-core@*",
+                    "sp-runtime@*",
+                    "frame-support@*"
+                ]
             }
         },
 
@@ -178,6 +210,21 @@
                     "prettier",
                     "nodemon",
                     "dotenv"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "react@latest",
+                    "react-dom@latest",
+                    "next@latest",
+                    "vite@latest",
+                    "express@latest",
+                    "fastify@latest",
+                    "hono@latest",
+                    "zod@latest",
+                    "drizzle-orm@latest",
+                    "prisma@latest",
+                    "tailwindcss@latest"
                 ]
             },
             "custom_install": {
@@ -459,6 +506,15 @@
                     "pip3 install --no-cache-dir --break-system-packages langgraph langsmith langserve",
                     "pip3 install --no-cache-dir --break-system-packages chromadb faiss-cpu sentence-transformers",
                     "python3 -c 'import langchain; print(f\"LangChain {langchain.__version__}\")'"
+                ]
+            },
+            "cache_warm": {
+                "pip": [
+                    "openai",
+                    "anthropic",
+                    "tiktoken",
+                    "chromadb",
+                    "sentence-transformers"
                 ]
             }
         },
