@@ -6,9 +6,30 @@
     },
     "projects": {
         "coinbase": {
-            "base": "base-system",
+            "base": "foundry",
             "packages": {
-                "npm": ["@coinbase/coinbase-sdk"]
+                "npm": [
+                    "@coinbase/coinbase-sdk",
+                    "@coinbase/onchainkit",
+                    "@coinbase/wallet-sdk",
+                    "@coinbase/cdp-sdk",
+                    "@coinbase/agentkit",
+                    "viem",
+                    "wagmi",
+                    "permissionless",
+                    "localtunnel"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "@coinbase/onchainkit@latest",
+                    "@coinbase/wallet-sdk@latest",
+                    "@coinbase/cdp-sdk@latest",
+                    "@coinbase/agentkit@latest",
+                    "@x402/fetch@latest",
+                    "@x402/axios@latest",
+                    "@x402/express@latest"
+                ]
             }
         },
         "injective": {
@@ -779,6 +800,279 @@
                     "mv /root/.pulumi/bin/* /usr/local/bin/",
                     "pip3 install --no-cache-dir pulumi pulumi-aws pulumi-gcp pulumi-kubernetes",
                     "pulumi version"
+                ]
+            }
+        },
+
+        "base-l2": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "@coinbase/onchainkit",
+                    "@coinbase/wallet-sdk",
+                    "@coinbase/cdp-sdk",
+                    "@coinbase/agentkit",
+                    "frames.js",
+                    "@farcaster/hub-nodejs",
+                    "permissionless",
+                    "viem",
+                    "wagmi",
+                    "ethers",
+                    "localtunnel"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "@coinbase/onchainkit@latest",
+                    "@coinbase/wallet-sdk@latest",
+                    "@coinbase/cdp-sdk@latest",
+                    "@coinbase/agentkit@latest",
+                    "frames.js@latest",
+                    "permissionless@latest",
+                    "@x402/fetch@latest",
+                    "@x402/axios@latest",
+                    "@x402/express@latest",
+                    "@rainbow-me/rainbowkit@latest"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "BASE_MAINNET_RPC": "https://mainnet.base.org",
+                    "BASE_SEPOLIA_RPC": "https://sepolia.base.org",
+                    "ENTRYPOINT_ADDRESS": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+                    "TEST_MNEMONIC": "test test test test test test test test test test test junk",
+                    "USDC_BASE_SEPOLIA": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                },
+                "root_commands": [
+                    "mkdir -p /home/project/.base-dev/scripts",
+                    "echo '#!/bin/bash\\n# Start anvil with pre-funded accounts (10000 ETH each)\\n# Mnemonic: test test test test test test test test test test test junk\\n# Account 0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\\n# Account 1: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8\\necho \"Starting Base Sepolia fork with pre-funded accounts...\"\\nanvil --fork-url https://sepolia.base.org --chain-id 84532 --balance 10000 --accounts 10 --mnemonic \"test test test test test test test test test test test junk\" \"$@\"' > /home/project/.base-dev/start-base-fork.sh",
+                    "echo '#!/bin/bash\\n# Mint test USDC to an address on local anvil\\nADDRESS=${1:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}\\nAMOUNT=${2:-1000000000000}  # 1M USDC (6 decimals)\\nRPC=${3:-http://127.0.0.1:8545}\\nUSCD=0x036CbD53842c5426634e7929541eC2318f3dCF7e\\necho \"Minting $AMOUNT USDC to $ADDRESS...\"\\n# Impersonate USDC minter and mint\\ncast rpc anvil_impersonateAccount 0x...  --rpc-url $RPC 2>/dev/null || true\\ncast send $USDC \"transfer(address,uint256)\" $ADDRESS $AMOUNT --rpc-url $RPC --unlocked --from 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 2>/dev/null\\necho \"Done. Check balance: cast call $USDC balanceOf(address)(uint256) $ADDRESS --rpc-url $RPC\"' > /home/project/.base-dev/scripts/mint-usdc.sh",
+                    "echo '#!/bin/bash\\n# Show test account info\\necho \"=== Pre-funded Test Accounts ===\"\\necho \"Mnemonic: test test test test test test test test test test test junk\"\\necho \"\"\\necho \"Account 0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\"\\necho \"Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80\"\\necho \"\"\\necho \"Account 1: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8\"\\necho \"Private Key: 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d\"\\necho \"\"\\necho \"Account 2: 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC\"\\necho \"Private Key: 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a\"\\necho \"\"\\necho \"All accounts have 10000 ETH on local anvil fork.\"' > /home/project/.base-dev/scripts/show-accounts.sh",
+                    "chmod +x /home/project/.base-dev/*.sh /home/project/.base-dev/scripts/*.sh",
+                    "chown -R project:project /home/project/.base-dev"
+                ]
+            }
+        },
+
+        "x402-payments": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "@coinbase/x402",
+                    "@x402/fetch",
+                    "@x402/axios",
+                    "@x402/express",
+                    "@x402/hono",
+                    "@x402/core",
+                    "@x402/evm",
+                    "@coinbase/cdp-sdk",
+                    "@coinbase/wallet-sdk",
+                    "viem",
+                    "wagmi",
+                    "ethers",
+                    "hono",
+                    "express",
+                    "localtunnel"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "@coinbase/x402@latest",
+                    "@x402/fetch@latest",
+                    "@x402/axios@latest",
+                    "@x402/express@latest",
+                    "@x402/hono@latest",
+                    "@x402/core@latest",
+                    "@x402/evm@latest",
+                    "@coinbase/cdp-sdk@latest",
+                    "permissionless@latest"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "BASE_MAINNET_RPC": "https://mainnet.base.org",
+                    "BASE_SEPOLIA_RPC": "https://sepolia.base.org",
+                    "TEST_MNEMONIC": "test test test test test test test test test test test junk",
+                    "USDC_BASE_SEPOLIA": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                    "USDC_BASE_MAINNET": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                    "X402_FACILITATOR_TESTNET": "https://x402.org/facilitator",
+                    "X402_FACILITATOR_MAINNET": "https://api.cdp.coinbase.com/platform/v2/x402",
+                    "X402_CHAIN_ID_BASE_SEPOLIA": "eip155:84532",
+                    "X402_CHAIN_ID_BASE_MAINNET": "eip155:8453"
+                },
+                "root_commands": [
+                    "mkdir -p /home/project/.x402-dev/scripts",
+                    "echo '#!/bin/bash\\n# Start the full x402 development stack\\necho \"=== x402 Payment Development Stack ===\"\\necho \"\"\\necho \"Starting Base Sepolia fork with pre-funded accounts...\"\\nanvil --fork-url https://sepolia.base.org --chain-id 84532 --balance 10000 --accounts 10 --mnemonic \"test test test test test test test test test test test junk\" --port 8545 &\\nANVIL_PID=$!\\nsleep 3\\necho \"Anvil running on http://localhost:8545\"\\necho \"\"\\necho \"=== x402 Facilitator Endpoints ===\"\\necho \"Testnet: https://x402.org/facilitator\"\\necho \"Mainnet: https://api.cdp.coinbase.com/platform/v2/x402\"\\necho \"\"\\necho \"=== Chain IDs ===\"\\necho \"Base Sepolia: eip155:84532\"\\necho \"Base Mainnet: eip155:8453\"\\necho \"\"\\necho \"=== Test Accounts ===\"\\necho \"Account 0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\"\\necho \"Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80\"\\necho \"\"\\necho \"=== USDC Addresses ===\"\\necho \"Base Sepolia: 0x036CbD53842c5426634e7929541eC2318f3dCF7e\"\\necho \"Base Mainnet: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913\"\\necho \"\"\\necho \"Press Ctrl+C to stop...\"\\nwait $ANVIL_PID' > /home/project/.x402-dev/start-x402-dev.sh",
+                    "echo '#!/bin/bash\\n# Show x402 configuration\\necho \"=== x402 Payment Protocol Configuration ===\"\\necho \"\"\\necho \"Facilitator Endpoints:\"\\necho \"  Testnet (public):  https://x402.org/facilitator\"\\necho \"  Mainnet (CDP):     https://api.cdp.coinbase.com/platform/v2/x402\"\\necho \"\"\\necho \"Required Environment Variables (mainnet):\"\\necho \"  CDP_API_KEY_ID=your-api-key-id\"\\necho \"  CDP_API_KEY_SECRET=your-api-key-secret\"\\necho \"\"\\necho \"Supported Chains:\"\\necho \"  Base Sepolia:  eip155:84532\"\\necho \"  Base Mainnet:  eip155:8453\"\\necho \"  Solana Devnet: solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1\"\\necho \"  Solana Main:   solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp\"\\necho \"\"\\necho \"USDC Addresses:\"\\necho \"  Base Sepolia: 0x036CbD53842c5426634e7929541eC2318f3dCF7e\"\\necho \"  Base Mainnet: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913\"\\necho \"\"\\necho \"Documentation: https://docs.cdp.coinbase.com/x402/welcome\"' > /home/project/.x402-dev/scripts/show-config.sh",
+                    "echo '#!/bin/bash\\n# Example x402 seller server setup\\ncat << '\"'\"'EXAMPLE'\"'\"'\\nimport { paymentMiddleware } from \"@x402/express\";\\nimport { facilitatorClient } from \"@coinbase/x402\";\\nimport express from \"express\";\\n\\nconst app = express();\\n\\n// Testnet configuration\\nconst facilitator = facilitatorClient({\\n  url: \"https://x402.org/facilitator\",\\n});\\n\\n// Protected endpoint requiring payment\\napp.get(\"/premium-content\",\\n  paymentMiddleware(facilitator, {\\n    payTo: \"0xYourWalletAddress\",\\n    amount: \"100000\", // 0.10 USDC (6 decimals)\\n    asset: \"USDC\",\\n    network: \"eip155:84532\", // Base Sepolia\\n  }),\\n  (req, res) => {\\n    res.json({ content: \"Premium content here!\" });\\n  }\\n);\\n\\napp.listen(3000);\\nEXAMPLE' > /home/project/.x402-dev/scripts/example-seller.sh",
+                    "chmod +x /home/project/.x402-dev/*.sh /home/project/.x402-dev/scripts/*.sh",
+                    "chown -R project:project /home/project/.x402-dev"
+                ]
+            }
+        },
+
+        "base-aa": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "permissionless",
+                    "@coinbase/wallet-sdk",
+                    "@coinbase/onchainkit",
+                    "viem",
+                    "wagmi",
+                    "ethers",
+                    "@pimlico/alto",
+                    "userop",
+                    "@account-abstraction/sdk",
+                    "@account-abstraction/contracts",
+                    "localtunnel"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "permissionless@latest",
+                    "@coinbase/wallet-sdk@latest",
+                    "@coinbase/onchainkit@latest",
+                    "@pimlico/alto@latest",
+                    "userop@latest",
+                    "@account-abstraction/sdk@latest"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "ENTRYPOINT_V06": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+                    "ENTRYPOINT_V07": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+                    "BASE_SEPOLIA_RPC": "https://sepolia.base.org",
+                    "TEST_MNEMONIC": "test test test test test test test test test test test junk",
+                    "BUNDLER_RPC": "http://localhost:4337"
+                },
+                "root_commands": [
+                    "mkdir -p /home/project/.aa-dev/scripts /home/project/.aa-dev/contracts",
+                    "echo '#!/bin/bash\\n# Start the full AA development stack (anvil + bundler)\\necho \"=== Account Abstraction Development Stack ===\"\\necho \"\"\\necho \"Starting Base Sepolia fork with pre-funded accounts...\"\\nanvil --fork-url https://sepolia.base.org --chain-id 84532 --balance 10000 --accounts 10 --mnemonic \"test test test test test test test test test test test junk\" --port 8545 &\\nANVIL_PID=$!\\nsleep 3\\necho \"Anvil running on http://localhost:8545\"\\necho \"\"\\necho \"Starting Alto bundler on port 4337...\"\\nnpx @pimlico/alto --rpc-url http://127.0.0.1:8545 --entry-points 0x0000000071727De22E5E9d8BAf0edAc6f37da032 --port 4337 &\\nBUNDLER_PID=$!\\nsleep 2\\necho \"Bundler running on http://localhost:4337\"\\necho \"\"\\necho \"=== Test Accounts ===\"\\necho \"Account 0 (Bundler Signer): 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\"\\necho \"Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80\"\\necho \"\"\\necho \"=== Contract Addresses ===\"\\necho \"EntryPoint v0.7: 0x0000000071727De22E5E9d8BAf0edAc6f37da032\"\\necho \"EntryPoint v0.6: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789\"\\necho \"\"\\necho \"Press Ctrl+C to stop all services...\"\\nfunction cleanup { kill $ANVIL_PID $BUNDLER_PID 2>/dev/null; exit 0; }\\ntrap cleanup SIGINT SIGTERM\\nwait' > /home/project/.aa-dev/start-aa-stack.sh",
+                    "echo '#!/bin/bash\\n# Deploy a simple verifying paymaster for testing\\necho \"Deploying test verifying paymaster...\"\\n# This is a placeholder - in production you would deploy actual paymaster contracts\\necho \"For production paymasters, see: https://docs.pimlico.io/paymaster\"\\necho \"\"\\necho \"Available paymaster options:\"\\necho \"1. Pimlico Paymaster (hosted): https://api.pimlico.io/v2/base-sepolia/rpc?apikey=YOUR_KEY\"\\necho \"2. Coinbase Smart Wallet (gasless for eligible txs)\"\\necho \"3. Deploy your own VerifyingPaymaster contract\"' > /home/project/.aa-dev/scripts/deploy-paymaster.sh",
+                    "echo '#!/bin/bash\\n# Show AA stack info\\necho \"=== Account Abstraction Stack Info ===\"\\necho \"\"\\necho \"EntryPoint v0.7: 0x0000000071727De22E5E9d8BAf0edAc6f37da032\"\\necho \"EntryPoint v0.6: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789\"\\necho \"\"\\necho \"Bundler Endpoints:\"\\necho \"  Local Alto: http://localhost:4337\"\\necho \"  Pimlico: https://api.pimlico.io/v2/base-sepolia/rpc?apikey=YOUR_KEY\"\\necho \"  Alchemy: https://base-sepolia.g.alchemy.com/v2/YOUR_KEY\"\\necho \"\"\\necho \"Smart Account Factories (Base Sepolia):\"\\necho \"  Coinbase Smart Wallet: 0x...\"\\necho \"  Safe: 0x...\"\\necho \"  Kernel: 0x...\"' > /home/project/.aa-dev/scripts/show-info.sh",
+                    "chmod +x /home/project/.aa-dev/*.sh /home/project/.aa-dev/scripts/*.sh",
+                    "chown -R project:project /home/project/.aa-dev"
+                ]
+            }
+        },
+
+        "ai-agent-web3": {
+            "base": "scientific-python",
+            "packages": {
+                "npm": [
+                    "@coinbase/agentkit",
+                    "@coinbase/cdp-sdk",
+                    "@x402/fetch",
+                    "@xmtp/xmtp-js",
+                    "viem",
+                    "wagmi",
+                    "langchain",
+                    "@langchain/core",
+                    "@langchain/openai",
+                    "@langchain/anthropic"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "@coinbase/agentkit@latest",
+                    "@coinbase/cdp-sdk@latest",
+                    "@x402/fetch@latest",
+                    "@xmtp/xmtp-js@latest",
+                    "permissionless@latest"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages langchain langchain-core langchain-openai langchain-anthropic",
+                    "pip3 install --no-cache-dir --break-system-packages langgraph langsmith",
+                    "pip3 install --no-cache-dir --break-system-packages web3 eth-account",
+                    "pip3 install --no-cache-dir --break-system-packages chromadb sentence-transformers",
+                    "python3 -c 'import langchain; import web3; print(f\"LangChain {langchain.__version__}, Web3.py installed\")'"
+                ]
+            }
+        },
+
+        "farcaster": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "frames.js",
+                    "@farcaster/hub-nodejs",
+                    "@farcaster/core",
+                    "@coinbase/onchainkit",
+                    "viem",
+                    "wagmi",
+                    "hono",
+                    "next"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "frames.js@latest",
+                    "@farcaster/hub-nodejs@latest",
+                    "@coinbase/onchainkit@latest",
+                    "frog@latest"
+                ]
+            }
+        },
+
+        "xmtp": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "@xmtp/xmtp-js",
+                    "@xmtp/react-sdk",
+                    "@xmtp/content-type-text",
+                    "@xmtp/content-type-reaction",
+                    "@xmtp/content-type-reply",
+                    "@xmtp/content-type-remote-attachment",
+                    "viem",
+                    "ethers"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "@xmtp/xmtp-js@latest",
+                    "@xmtp/react-sdk@latest",
+                    "@xmtp/mls-client@latest"
+                ]
+            }
+        },
+
+        "convex": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "convex",
+                    "convex-dev"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "convex@latest",
+                    "convex-helpers@latest",
+                    "@convex-dev/auth@latest"
+                ]
+            }
+        },
+
+        "brevis": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "ethers",
+                    "viem",
+                    "hardhat"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
+                    "echo 'Brevis ZK coprocessor development environment ready'"
                 ]
             }
         }

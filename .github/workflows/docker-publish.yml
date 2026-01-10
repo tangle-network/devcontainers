@@ -196,10 +196,6 @@ jobs:
       matrix:
         image:
           - clickhouse
-          - coinbase
-          - coinbase_ethereum
-          - coinbase_ethereum_solana
-          - coinbase_polygon
           - convex
           - elasticsearch
           - injective
@@ -217,6 +213,7 @@ jobs:
           - ton
           - universal
           - weaviate
+          - xmtp
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -269,7 +266,6 @@ jobs:
       matrix:
         image:
           - aptos
-          - brevis
           - hyperlane
           - hyperliquid
           - near
@@ -387,8 +383,16 @@ jobs:
       matrix:
         image:
           - arbitrum
+          - base-aa
+          - base-l2
+          - brevis
           - chainlink
+          - coinbase
+          - coinbase_ethereum
+          - coinbase_ethereum_solana
+          - coinbase_polygon
           - ethereum
+          - farcaster
           - foundry
           - gelato
           - gnosis
@@ -403,6 +407,7 @@ jobs:
           - soneium
           - stylus
           - tempo
+          - x402-payments
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -454,6 +459,7 @@ jobs:
       fail-fast: false
       matrix:
         image:
+          - ai-agent-web3
           - chromadb
           - huggingface-cpu
           - jupyter
