@@ -42,13 +42,14 @@ function generateCacheWarmCommands(cacheWarm) {
         commands.push(`    printf '[package]\\nname = "warm"\\nversion = "0.0.0"\\nedition = "2021"\\n\\n[dependencies]\\n${deps}\\n' > /tmp/cargo-warm/Cargo.toml && \\`);
         commands.push(`    mkdir -p /tmp/cargo-warm/src && echo 'fn main() {}' > /tmp/cargo-warm/src/main.rs && \\`);
         commands.push(`    cd /tmp/cargo-warm && cargo fetch && \\`);
-        commands.push(`    rm -rf /tmp/cargo-warm`);
+        commands.push(`    rm -rf /tmp/cargo-warm && \\`);
+        commands.push(`    chmod -R a+w $CARGO_HOME`);
     }
 
     // pip cache warming
     if (cacheWarm.pip && cacheWarm.pip.length > 0) {
         commands.push(`# Pre-warm pip cache with project-specific packages`);
-        commands.push(`RUN pip download --dest /tmp/pip-warm ${cacheWarm.pip.join(' ')} && rm -rf /tmp/pip-warm`);
+        commands.push(`RUN pip download --break-system-packages --dest /tmp/pip-warm ${cacheWarm.pip.join(' ')} && rm -rf /tmp/pip-warm`);
     }
 
     return commands.length > 0 ? '\n' + commands.join('\n') + '\n' : '';

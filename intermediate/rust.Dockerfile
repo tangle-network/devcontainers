@@ -14,7 +14,8 @@ RUN mkdir -p /tmp/cargo-warm && \
     mkdir -p /tmp/cargo-warm/src && \
     echo 'fn main() {}' > /tmp/cargo-warm/src/main.rs && \
     cd /tmp/cargo-warm && cargo fetch && \
-    rm -rf /tmp/cargo-warm
+    rm -rf /tmp/cargo-warm && \
+    chmod -R a+w $CARGO_HOME
 
 USER project
 
