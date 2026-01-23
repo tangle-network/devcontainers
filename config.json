@@ -1,8 +1,9 @@
 {
     "intermediate_templates": {
-        "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\n# Pre-warm cargo cache with commonly used crates\nRUN mkdir -p /tmp/cargo-warm && \\\n    printf '[package]\\nname = \"warm\"\\nversion = \"0.0.0\"\\nedition = \"2021\"\\n\\n[dependencies]\\ntokio = { version = \"1\", features = [\"full\"] }\\nserde = { version = \"1\", features = [\"derive\"] }\\nserde_json = \"1\"\\nthiserror = \"1\"\\nanyhow = \"1\"\\ntracing = \"0.1\"\\ntracing-subscriber = \"0.3\"\\nasync-trait = \"0.1\"\\nfutures = \"0.3\"\\nreqwest = { version = \"0.12\", features = [\"json\"] }\\nclap = { version = \"4\", features = [\"derive\"] }\\n' > /tmp/cargo-warm/Cargo.toml && \\\n    mkdir -p /tmp/cargo-warm/src && \\\n    echo 'fn main() {}' > /tmp/cargo-warm/src/main.rs && \\\n    cd /tmp/cargo-warm && cargo fetch && \\\n    rm -rf /tmp/cargo-warm && \\\n    chmod -R a+w $CARGO_HOME\n\nUSER project\n\nLABEL description=\"Rust intermediate layer\"\n",
+        "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\n# Pre-warm cargo cache with commonly used crates\nRUN mkdir -p /tmp/cargo-warm && \\\n    printf '[package]\\nname = \"warm\"\\nversion = \"0.0.0\"\\nedition = \"2021\"\\n\\n[dependencies]\\ntokio = { version = \"1\", features = [\"full\"] }\\nserde = { version = \"1\", features = [\"derive\"] }\\nserde_json = \"1\"\\nthiserror = \"1\"\\nanyhow = \"1\"\\ntracing = \"0.1\"\\ntracing-subscriber = \"0.3\"\\nasync-trait = \"0.1\"\\nfutures = \"0.3\"\\nreqwest = { version = \"0.12\", features = [\"json\"] }\\nclap = { version = \"4\", features = [\"derive\"] }\\n' > /tmp/cargo-warm/Cargo.toml && \\\n    mkdir -p /tmp/cargo-warm/src && \\\n    echo 'fn main() {}' > /tmp/cargo-warm/src/main.rs && \\\n    cd /tmp/cargo-warm && cargo fetch && \\\n    rm -rf /tmp/cargo-warm && \\\n    chmod -R a+w $CARGO_HOME\n\n# Install rust-analyzer LSP for Rust code intelligence\nRUN rustup component add rust-analyzer && \\\n    ln -sf $(rustup which --toolchain stable rust-analyzer) /usr/local/bin/rust-analyzer\n\nUSER project\n\nLABEL description=\"Rust intermediate layer\"\n",
         "foundry": "FROM rust:latest\n\nENV PATH=/root/.foundry/bin:/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl -L https://foundry.paradigm.xyz | bash \\\n    && /root/.foundry/bin/foundryup \\\n    && chmod -R a+rx /root/.foundry\n\nUSER project\n\nLABEL description=\"Foundry intermediate layer (forge, cast, anvil, chisel)\"\n",
-        "scientific-python": "FROM base-system:latest\n\nUSER root\nRUN pip3 install --no-cache-dir --break-system-packages \\\n    numpy scipy pandas matplotlib seaborn plotly \\\n    scikit-learn scikit-image \\\n    jupyter jupyterlab ipython notebook \\\n    pillow opencv-python-headless \\\n    h5py pyarrow fastparquet \\\n    tqdm rich typer click \\\n    httpx aiohttp requests \\\n    pydantic pydantic-settings \\\n    python-dotenv PyYAML toml \\\n    && jupyter --version\n\nUSER project\n\nLABEL description=\"Scientific Python intermediate layer (NumPy, SciPy, Pandas, Jupyter, ML basics)\"\n"
+        "scientific-python": "FROM base-system:latest\n\nUSER root\nRUN pip3 install --no-cache-dir --break-system-packages \\\n    numpy scipy pandas matplotlib seaborn plotly \\\n    scikit-learn scikit-image \\\n    jupyter jupyterlab ipython notebook \\\n    pillow opencv-python-headless \\\n    h5py pyarrow fastparquet \\\n    tqdm rich typer click \\\n    httpx aiohttp requests \\\n    pydantic pydantic-settings \\\n    python-dotenv PyYAML toml \\\n    && jupyter --version\n\nUSER project\n\nLABEL description=\"Scientific Python intermediate layer (NumPy, SciPy, Pandas, Jupyter, ML basics)\"\n",
+        "go": "FROM base-system:latest\n\nENV GOROOT=/usr/local/go \\\n    GOPATH=/go \\\n    PATH=/usr/local/go/bin:/go/bin:$PATH\n\nUSER root\nRUN ARCH=$(dpkg --print-architecture) && \\\n    if [ \"$ARCH\" = \"amd64\" ]; then GO_ARCH=\"amd64\"; \\\n    elif [ \"$ARCH\" = \"arm64\" ]; then GO_ARCH=\"arm64\"; \\\n    else echo \"Unsupported architecture: $ARCH\"; exit 1; fi && \\\n    curl -fsSL https://go.dev/dl/go1.22.0.linux-${GO_ARCH}.tar.gz | tar -C /usr/local -xzf - && \\\n    mkdir -p /go/bin /go/pkg /go/src && \\\n    chmod -R a+w /go\n\n# Install gopls LSP for Go code intelligence\nRUN go install golang.org/x/tools/gopls@latest && \\\n    ln -sf /go/bin/gopls /usr/local/bin/gopls\n\nUSER project\n\nLABEL description=\"Go intermediate layer\"\n"
     },
     "projects": {
         "coinbase": {
@@ -35,7 +36,10 @@
         "injective": {
             "base": "base-system",
             "packages": {
-                "npm": ["@injectivelabs/sdk-ts", "@injectivelabs/networks"]
+                "npm": [
+                    "@injectivelabs/sdk-ts",
+                    "@injectivelabs/networks"
+                ]
             }
         },
         "succinct": {
@@ -56,7 +60,9 @@
         "risc0": {
             "base": "rust",
             "packages": {
-                "cargo": ["cargo-risczero"]
+                "cargo": [
+                    "cargo-risczero"
+                ]
             },
             "custom_install": {
                 "env": {
@@ -67,11 +73,16 @@
                 ]
             }
         },
-
         "ethereum": {
             "base": "foundry",
             "packages": {
-                "npm": ["ethers", "viem", "@wagmi/core", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+                "npm": [
+                    "ethers",
+                    "viem",
+                    "@wagmi/core",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
             },
             "cache_warm": {
                 "npm": [
@@ -86,13 +97,23 @@
         "polygon": {
             "base": "foundry",
             "packages": {
-                "npm": ["ethers", "viem", "hardhat"]
+                "npm": [
+                    "ethers",
+                    "viem",
+                    "hardhat"
+                ]
             }
         },
         "zksync": {
             "base": "rust",
             "packages": {
-                "npm": ["zksync-ethers", "ethers", "zksync-cli", "hardhat", "@matterlabs/hardhat-zksync"]
+                "npm": [
+                    "zksync-ethers",
+                    "ethers",
+                    "zksync-cli",
+                    "hardhat",
+                    "@matterlabs/hardhat-zksync"
+                ]
             },
             "custom_install": {
                 "env": {
@@ -159,7 +180,9 @@
                 "env": {
                     "PATH": "/root/.local/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
                 },
-                "apt_packages": ["python3-pip"],
+                "apt_packages": [
+                    "python3-pip"
+                ],
                 "root_commands": [
                     "cargo install --git https://github.com/aptos-labs/aptos-core.git aptos --locked",
                     "aptos --version || echo 'Aptos CLI installed'"
@@ -169,7 +192,9 @@
         "stylus": {
             "base": "foundry",
             "packages": {
-                "cargo": ["cargo-stylus"]
+                "cargo": [
+                    "cargo-stylus"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -180,8 +205,12 @@
         "tangle": {
             "base": "rust",
             "packages": {
-                "cargo": ["subxt-cli@0.39.0"],
-                "npm": ["@tangle-network/tangle-substrate-types"]
+                "cargo": [
+                    "subxt-cli@0.39.0"
+                ],
+                "npm": [
+                    "@tangle-network/tangle-substrate-types"
+                ]
             },
             "cache_warm": {
                 "cargo": [
@@ -192,7 +221,6 @@
                 ]
             }
         },
-
         "reth": {
             "base": "rust",
             "packages": {
@@ -211,13 +239,25 @@
         "foundry": {
             "base": "foundry",
             "packages": {
-                "npm": ["ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox", "@nomicfoundation/hardhat-foundry"]
+                "npm": [
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox",
+                    "@nomicfoundation/hardhat-foundry"
+                ]
             }
         },
         "hardhat": {
             "base": "foundry",
             "packages": {
-                "npm": ["hardhat", "@nomicfoundation/hardhat-toolbox", "@nomicfoundation/hardhat-verify", "ethers", "viem"]
+                "npm": [
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox",
+                    "@nomicfoundation/hardhat-verify",
+                    "ethers",
+                    "viem"
+                ]
             }
         },
         "universal": {
@@ -281,18 +321,29 @@
                 ]
             }
         },
-
         "arbitrum": {
             "base": "foundry",
             "packages": {
-                "npm": ["@arbitrum/sdk", "ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+                "npm": [
+                    "@arbitrum/sdk",
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
             }
         },
-
         "optimism": {
             "base": "foundry",
             "packages": {
-                "npm": ["@eth-optimism/sdk", "@eth-optimism/core-utils", "ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+                "npm": [
+                    "@eth-optimism/sdk",
+                    "@eth-optimism/core-utils",
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -300,18 +351,30 @@
                 ]
             }
         },
-
         "gelato": {
             "base": "foundry",
             "packages": {
-                "npm": ["@gelatonetwork/automate-sdk", "@gelatonetwork/relay-sdk", "@gelatonetwork/web3-functions-sdk", "ethers", "viem", "hardhat"]
+                "npm": [
+                    "@gelatonetwork/automate-sdk",
+                    "@gelatonetwork/relay-sdk",
+                    "@gelatonetwork/web3-functions-sdk",
+                    "ethers",
+                    "viem",
+                    "hardhat"
+                ]
             }
         },
-
         "hyperlane": {
             "base": "rust",
             "packages": {
-                "npm": ["@hyperlane-xyz/sdk", "@hyperlane-xyz/core", "@hyperlane-xyz/utils", "@hyperlane-xyz/cli", "ethers", "viem"]
+                "npm": [
+                    "@hyperlane-xyz/sdk",
+                    "@hyperlane-xyz/core",
+                    "@hyperlane-xyz/utils",
+                    "@hyperlane-xyz/cli",
+                    "ethers",
+                    "viem"
+                ]
             },
             "custom_install": {
                 "env": {
@@ -325,18 +388,28 @@
                 ]
             }
         },
-
         "gnosis": {
             "base": "foundry",
             "packages": {
-                "npm": ["@safe-global/protocol-kit", "@safe-global/api-kit", "@safe-global/safe-core-sdk-types", "@gnosis.pm/zodiac", "@gnosis.pm/safe-deployments", "ethers", "viem", "hardhat"]
+                "npm": [
+                    "@safe-global/protocol-kit",
+                    "@safe-global/api-kit",
+                    "@safe-global/safe-core-sdk-types",
+                    "@gnosis.pm/zodiac",
+                    "@gnosis.pm/safe-deployments",
+                    "ethers",
+                    "viem",
+                    "hardhat"
+                ]
             }
         },
-
         "hyperliquid": {
             "base": "rust",
             "packages": {
-                "npm": ["ethers", "viem"]
+                "npm": [
+                    "ethers",
+                    "viem"
+                ]
             },
             "custom_install": {
                 "env": {
@@ -350,28 +423,45 @@
                 ]
             }
         },
-
         "lifi": {
             "base": "foundry",
             "packages": {
-                "npm": ["@lifi/sdk", "@lifi/types", "@lifi/wallet-management", "ethers", "viem", "hardhat"]
+                "npm": [
+                    "@lifi/sdk",
+                    "@lifi/types",
+                    "@lifi/wallet-management",
+                    "ethers",
+                    "viem",
+                    "hardhat"
+                ]
             }
         },
-
         "linea": {
             "base": "foundry",
             "packages": {
-                "npm": ["@consensys/linea-sdk", "ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+                "npm": [
+                    "@consensys/linea-sdk",
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
             }
         },
-
         "mongodb": {
             "base": "base-system",
             "packages": {
-                "npm": ["mongodb", "mongoose", "@types/mongoose", "mongosh"]
+                "npm": [
+                    "mongodb",
+                    "mongoose",
+                    "@types/mongoose",
+                    "mongosh"
+                ]
             },
             "custom_install": {
-                "apt_packages": ["gnupg"],
+                "apt_packages": [
+                    "gnupg"
+                ],
                 "root_commands": [
                     "curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg",
                     "echo 'deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/7.0 multiverse' | tee /etc/apt/sources.list.d/mongodb-org-7.0.list",
@@ -381,32 +471,52 @@
                 ]
             }
         },
-
         "openzeppelin": {
             "base": "foundry",
             "packages": {
-                "npm": ["@openzeppelin/contracts", "@openzeppelin/contracts-upgradeable", "@openzeppelin/upgrades-core", "@openzeppelin/defender-sdk", "@openzeppelin/hardhat-upgrades", "@openzeppelin/wizard", "hardhat", "ethers"]
+                "npm": [
+                    "@openzeppelin/contracts",
+                    "@openzeppelin/contracts-upgradeable",
+                    "@openzeppelin/upgrades-core",
+                    "@openzeppelin/defender-sdk",
+                    "@openzeppelin/hardhat-upgrades",
+                    "@openzeppelin/wizard",
+                    "hardhat",
+                    "ethers"
+                ]
             }
         },
-
         "polymer": {
             "base": "foundry",
             "packages": {
-                "npm": ["@open-ibc/vibc-core-smart-contracts", "ethers", "viem", "hardhat"]
+                "npm": [
+                    "@open-ibc/vibc-core-smart-contracts",
+                    "ethers",
+                    "viem",
+                    "hardhat"
+                ]
             }
         },
-
         "soneium": {
             "base": "foundry",
             "packages": {
-                "npm": ["ethers", "viem", "@wagmi/core", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+                "npm": [
+                    "ethers",
+                    "viem",
+                    "@wagmi/core",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
             }
         },
-
         "starknet": {
             "base": "rust",
             "packages": {
-                "npm": ["starknet", "get-starknet", "@starknet-io/types-js"]
+                "npm": [
+                    "starknet",
+                    "get-starknet",
+                    "@starknet-io/types-js"
+                ]
             },
             "custom_install": {
                 "env": {
@@ -420,18 +530,29 @@
                 ]
             }
         },
-
         "chainlink": {
             "base": "foundry",
             "packages": {
-                "npm": ["@chainlink/contracts", "@chainlink/functions-toolkit", "@chainlink/local", "ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+                "npm": [
+                    "@chainlink/contracts",
+                    "@chainlink/functions-toolkit",
+                    "@chainlink/local",
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
             }
         },
-
         "tempo": {
             "base": "foundry",
             "packages": {
-                "npm": ["ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+                "npm": [
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
             },
             "custom_install": {
                 "env": {
@@ -443,11 +564,15 @@
                 ]
             }
         },
-
         "near": {
             "base": "rust",
             "packages": {
-                "npm": ["near-cli", "near-api-js", "@near-js/client", "near-seed-phrase"]
+                "npm": [
+                    "near-cli",
+                    "near-api-js",
+                    "@near-js/client",
+                    "near-seed-phrase"
+                ]
             },
             "custom_install": {
                 "env": {
@@ -460,11 +585,17 @@
                 ]
             }
         },
-
         "ton": {
             "base": "base-system",
             "packages": {
-                "npm": ["@ton/core", "@ton/crypto", "@ton/ton", "@ton/blueprint", "@tact-lang/compiler", "ton-access"]
+                "npm": [
+                    "@ton/core",
+                    "@ton/crypto",
+                    "@ton/ton",
+                    "@ton/blueprint",
+                    "@tact-lang/compiler",
+                    "ton-access"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -473,14 +604,17 @@
                 ]
             }
         },
-
         "monad": {
             "base": "foundry",
             "packages": {
-                "npm": ["ethers", "viem", "hardhat", "@nomicfoundation/hardhat-toolbox"]
+                "npm": [
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
             }
         },
-
         "pytorch-cpu": {
             "base": "scientific-python",
             "packages": {},
@@ -491,7 +625,6 @@
                 ]
             }
         },
-
         "tensorflow-cpu": {
             "base": "scientific-python",
             "packages": {},
@@ -502,7 +635,6 @@
                 ]
             }
         },
-
         "huggingface-cpu": {
             "base": "scientific-python",
             "packages": {},
@@ -515,11 +647,16 @@
                 ]
             }
         },
-
         "langchain": {
             "base": "scientific-python",
             "packages": {
-                "npm": ["langchain", "@langchain/core", "@langchain/openai", "@langchain/anthropic", "@langchain/community"]
+                "npm": [
+                    "langchain",
+                    "@langchain/core",
+                    "@langchain/openai",
+                    "@langchain/anthropic",
+                    "@langchain/community"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -539,7 +676,6 @@
                 ]
             }
         },
-
         "llamaindex": {
             "base": "scientific-python",
             "packages": {},
@@ -554,7 +690,6 @@
                 ]
             }
         },
-
         "vllm-cpu": {
             "base": "scientific-python",
             "packages": {},
@@ -566,11 +701,13 @@
                 ]
             }
         },
-
         "ollama": {
             "base": "base-system",
             "packages": {
-                "npm": ["ollama", "ollama-js"]
+                "npm": [
+                    "ollama",
+                    "ollama-js"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -579,7 +716,6 @@
                 ]
             }
         },
-
         "jupyter": {
             "base": "scientific-python",
             "packages": {},
@@ -592,7 +728,6 @@
                 ]
             }
         },
-
         "mlops": {
             "base": "scientific-python",
             "packages": {},
@@ -606,11 +741,12 @@
                 ]
             }
         },
-
         "qdrant": {
             "base": "rust",
             "packages": {
-                "npm": ["@qdrant/js-client-rest"]
+                "npm": [
+                    "@qdrant/js-client-rest"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -620,11 +756,13 @@
                 ]
             }
         },
-
         "chromadb": {
             "base": "scientific-python",
             "packages": {
-                "npm": ["chromadb", "chromadb-default-embed"]
+                "npm": [
+                    "chromadb",
+                    "chromadb-default-embed"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -633,14 +771,21 @@
                 ]
             }
         },
-
         "pgvector": {
             "base": "base-system",
             "packages": {
-                "npm": ["pg", "pgvector", "@types/pg"]
+                "npm": [
+                    "pg",
+                    "pgvector",
+                    "@types/pg"
+                ]
             },
             "custom_install": {
-                "apt_packages": ["postgresql", "postgresql-contrib", "libpq-dev"],
+                "apt_packages": [
+                    "postgresql",
+                    "postgresql-contrib",
+                    "libpq-dev"
+                ],
                 "root_commands": [
                     "apt-get update && apt-get install -y postgresql-16-pgvector && rm -rf /var/lib/apt/lists/*",
                     "pip3 install --no-cache-dir pgvector psycopg2-binary sqlalchemy",
@@ -648,7 +793,6 @@
                 ]
             }
         },
-
         "milvus": {
             "base": "base-system",
             "packages": {},
@@ -660,11 +804,13 @@
                 ]
             }
         },
-
         "weaviate": {
             "base": "base-system",
             "packages": {
-                "npm": ["weaviate-ts-client", "weaviate-client"]
+                "npm": [
+                    "weaviate-ts-client",
+                    "weaviate-client"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -673,11 +819,14 @@
                 ]
             }
         },
-
         "redis": {
             "base": "base-system",
             "packages": {
-                "npm": ["redis", "ioredis", "@redis/client"]
+                "npm": [
+                    "redis",
+                    "ioredis",
+                    "@redis/client"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -687,14 +836,18 @@
                 ]
             }
         },
-
         "kafka": {
             "base": "base-system",
             "packages": {
-                "npm": ["kafkajs", "@confluentinc/kafka-javascript"]
+                "npm": [
+                    "kafkajs",
+                    "@confluentinc/kafka-javascript"
+                ]
             },
             "custom_install": {
-                "apt_packages": ["default-jdk"],
+                "apt_packages": [
+                    "default-jdk"
+                ],
                 "root_commands": [
                     "curl -sSL https://downloads.apache.org/kafka/3.7.0/kafka_2.13-3.7.0.tgz | tar -xz -C /opt",
                     "ln -s /opt/kafka_2.13-3.7.0 /opt/kafka",
@@ -705,14 +858,18 @@
                 ]
             }
         },
-
         "elasticsearch": {
             "base": "base-system",
             "packages": {
-                "npm": ["@elastic/elasticsearch", "elasticsearch"]
+                "npm": [
+                    "@elastic/elasticsearch",
+                    "elasticsearch"
+                ]
             },
             "custom_install": {
-                "apt_packages": ["default-jdk"],
+                "apt_packages": [
+                    "default-jdk"
+                ],
                 "root_commands": [
                     "curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg",
                     "echo 'deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main' | tee /etc/apt/sources.list.d/elastic-8.x.list",
@@ -722,11 +879,12 @@
                 ]
             }
         },
-
         "clickhouse": {
             "base": "base-system",
             "packages": {
-                "npm": ["@clickhouse/client"]
+                "npm": [
+                    "@clickhouse/client"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -738,11 +896,13 @@
                 ]
             }
         },
-
         "minio": {
             "base": "base-system",
             "packages": {
-                "npm": ["minio", "@aws-sdk/client-s3"]
+                "npm": [
+                    "minio",
+                    "@aws-sdk/client-s3"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -753,11 +913,12 @@
                 ]
             }
         },
-
         "kubernetes": {
             "base": "base-system",
             "packages": {
-                "npm": ["@kubernetes/client-node"]
+                "npm": [
+                    "@kubernetes/client-node"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -771,11 +932,14 @@
                 ]
             }
         },
-
         "terraform": {
             "base": "base-system",
             "packages": {
-                "npm": ["cdktf-cli", "@cdktf/provider-aws", "@cdktf/provider-google"]
+                "npm": [
+                    "cdktf-cli",
+                    "@cdktf/provider-aws",
+                    "@cdktf/provider-google"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -788,11 +952,16 @@
                 ]
             }
         },
-
         "pulumi": {
             "base": "base-system",
             "packages": {
-                "npm": ["@pulumi/pulumi", "@pulumi/aws", "@pulumi/gcp", "@pulumi/azure-native", "@pulumi/kubernetes"]
+                "npm": [
+                    "@pulumi/pulumi",
+                    "@pulumi/aws",
+                    "@pulumi/gcp",
+                    "@pulumi/azure-native",
+                    "@pulumi/kubernetes"
+                ]
             },
             "custom_install": {
                 "root_commands": [
@@ -803,7 +972,6 @@
                 ]
             }
         },
-
         "base-l2": {
             "base": "foundry",
             "packages": {
@@ -853,7 +1021,6 @@
                 ]
             }
         },
-
         "x402-payments": {
             "base": "foundry",
             "packages": {
@@ -910,7 +1077,6 @@
                 ]
             }
         },
-
         "base-aa": {
             "base": "foundry",
             "packages": {
@@ -956,7 +1122,6 @@
                 ]
             }
         },
-
         "ai-agent-web3": {
             "base": "scientific-python",
             "packages": {
@@ -992,7 +1157,6 @@
                 ]
             }
         },
-
         "farcaster": {
             "base": "foundry",
             "packages": {
@@ -1016,7 +1180,6 @@
                 ]
             }
         },
-
         "xmtp": {
             "base": "base-system",
             "packages": {
@@ -1039,7 +1202,6 @@
                 ]
             }
         },
-
         "convex": {
             "base": "base-system",
             "packages": {
@@ -1056,7 +1218,6 @@
                 ]
             }
         },
-
         "brevis": {
             "base": "foundry",
             "packages": {

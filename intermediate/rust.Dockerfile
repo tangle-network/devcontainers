@@ -17,6 +17,10 @@ RUN mkdir -p /tmp/cargo-warm && \
     rm -rf /tmp/cargo-warm && \
     chmod -R a+w $CARGO_HOME
 
+# Install rust-analyzer LSP for Rust code intelligence
+RUN rustup component add rust-analyzer && \
+    ln -sf $(rustup which --toolchain stable rust-analyzer) /usr/local/bin/rust-analyzer
+
 USER project
 
 LABEL description="Rust intermediate layer"
