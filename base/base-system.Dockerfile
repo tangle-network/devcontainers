@@ -20,6 +20,85 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && npm install -g opencode-ai \
     && rm -rf /var/lib/apt/lists/*
 
+# LSP servers for code intelligence
+# These enable language server protocol support in the agent IDE
+RUN npm install -g \
+    typescript-language-server \
+    bash-language-server \
+    vscode-langservers-extracted \
+    pyright
+
+# Install clangd for C/C++ support
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends clangd && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install marksman for Markdown LSP support
+RUN MARKSMAN_VERSION="2024-12-18" && \
+    arch="$(uname -m)" && \
+    case "$arch" in \
+        x86_64) marksman_arch="marksman-linux-x64" ;; \
+        aarch64) marksman_arch="marksman-linux-arm64" ;; \
+        *) echo "Unsupported architecture: $arch" && exit 1 ;; \
+    esac && \
+    curl -fsSL "https://github.com/artempyanykh/marksman/releases/download/${MARKSMAN_VERSION}/${marksman_arch}" -o /usr/local/bin/marksman && \
+    chmod +x /usr/local/bin/marksman
+
+# Create default LSP configuration for agents
+# This provides baseline language server support when no user config exists
+# Languages with binaries not installed will gracefully fail to start
+RUN mkdir -p /etc/opencode && \
+    cat > /etc/opencode/opencode.config.json << 'EOFCONFIG'
+{
+  "lsp": {
+    "typescript": {
+      "command": ["typescript-language-server", "--stdio"],
+      "extensions": ["ts", "tsx"]
+    },
+    "javascript": {
+      "command": ["typescript-language-server", "--stdio"],
+      "extensions": ["js", "jsx", "mjs", "cjs"]
+    },
+    "python": {
+      "command": ["pyright-langserver", "--stdio"],
+      "extensions": ["py"]
+    },
+    "rust": {
+      "command": ["rust-analyzer"],
+      "extensions": ["rs"]
+    },
+    "go": {
+      "command": ["gopls", "serve"],
+      "extensions": ["go"]
+    },
+    "bash": {
+      "command": ["bash-language-server", "start"],
+      "extensions": ["sh", "bash"]
+    },
+    "json": {
+      "command": ["vscode-json-language-server", "--stdio"],
+      "extensions": ["json", "jsonc"]
+    },
+    "css": {
+      "command": ["vscode-css-language-server", "--stdio"],
+      "extensions": ["css", "scss", "sass", "less"]
+    },
+    "html": {
+      "command": ["vscode-html-language-server", "--stdio"],
+      "extensions": ["html", "htm"]
+    },
+    "markdown": {
+      "command": ["marksman", "server"],
+      "extensions": ["md", "mdx"]
+    },
+    "cpp": {
+      "command": ["clangd"],
+      "extensions": ["c", "cc", "cpp", "cxx", "h", "hpp"]
+    }
+  }
+}
+EOFCONFIG
+
 # Pre-warm npm cache with commonly used packages
 # This populates the npm cache so first `npm install` for these packages is instant
 # These packages cover: React ecosystem, build tools, testing, styling, utilities
