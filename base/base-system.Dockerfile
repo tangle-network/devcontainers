@@ -131,13 +131,13 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 # Install Factory Droids CLI
 RUN curl -fsSL https://app.factory.ai/cli | sh
 
-# Create project user and group for secure operations
+# Create agent user and group for secure operations
 # Use the existing ubuntu user (UID/GID 1000) and add to sudoers
 RUN echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
-    usermod -l project -d /home/project -m ubuntu && \
-    groupmod -n project ubuntu && \
-    # Create appuser as an alias for project user for MCP compatibility \
-    useradd --uid 1001 --gid 1000 --shell /bin/bash --home-dir /home/project --no-create-home appuser && \
+    usermod -l agent -d /home/agent -m ubuntu && \
+    groupmod -n agent ubuntu && \
+    # Create appuser as an alias for agent user for MCP compatibility \
+    useradd --uid 1001 --gid 1000 --shell /bin/bash --home-dir /home/agent --no-create-home appuser && \
     echo 'appuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 # Set up npm configuration for better caching and performance
@@ -152,8 +152,8 @@ RUN npm config set cache /tmp/.npm-cache --global \
     && npm config set legacy-peer-deps false --global
 
 # Create common directories with secure permissions
-RUN mkdir -p /home/project /tmp/.npm-cache /tmp/.pnpm-store && \
-    chown -R project:project /home/project /tmp/.npm-cache /tmp/.pnpm-store && \
+RUN mkdir -p /home/agent /home/agent/workspace /tmp/.npm-cache /tmp/.pnpm-store && \
+    chown -R agent:agent /home/agent /tmp/.npm-cache /tmp/.pnpm-store && \
     chmod -R 755 /tmp/.npm-cache /tmp/.pnpm-store
 
 # Clear npm cache and set pnpm store directory with proper ownership
@@ -167,16 +167,15 @@ RUN npm cache clean --force && \
     pnpm config set fetch-retry-mintimeout 10000 && \
     pnpm config set fetch-retry-maxtimeout 60000 && \
     mkdir -p /pnpm && \
-    chown -R project:project /pnpm
+    chown -R agent:agent /pnpm
 
 # Set up workspace with proper permissions
-RUN mkdir -p /workspace && \
-    chown -R project:project /workspace
+RUN chown -R agent:agent /home/agent/workspace
 
-WORKDIR /workspace
+WORKDIR /home/agent/workspace
 
-# Switch to project user for safer operations
-USER project
+# Switch to agent user for safer operations
+USER agent
 
 # Verify npm and pnpm work correctly as project user
 RUN npm --version && \
