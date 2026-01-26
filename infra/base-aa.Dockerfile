@@ -3,7 +3,7 @@ FROM foundry:latest
 ENV     ENTRYPOINT_V06=0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789 \
     ENTRYPOINT_V07=0x0000000071727De22E5E9d8BAf0edAc6f37da032 \
     BASE_SEPOLIA_RPC=https://sepolia.base.org \
-    TEST_MNEMONIC=test test test test test test test test test test test junk \
+    TEST_MNEMONIC="test test test test test test test test test test test junk" \
     BUNDLER_RPC=http://localhost:4337
 
 USER root
@@ -19,6 +19,6 @@ RUN npm install -g permissionless @coinbase/wallet-sdk @coinbase/onchainkit viem
 USER agent
 
 # Pre-warm npm cache with project-specific packages
-RUN npm cache add permissionless@latest @coinbase/wallet-sdk@latest @coinbase/onchainkit@latest @pimlico/alto@latest userop@latest @account-abstraction/sdk@latest
+RUN npm cache add permissionless@latest @coinbase/wallet-sdk@latest @coinbase/onchainkit@latest @pimlico/alto@latest userop@latest @account-abstraction/sdk@latest || true
 
 LABEL description="base-aa infrastructure layer"

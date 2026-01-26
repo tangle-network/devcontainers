@@ -2,7 +2,7 @@ FROM foundry:latest
 
 ENV     BASE_MAINNET_RPC=https://mainnet.base.org \
     BASE_SEPOLIA_RPC=https://sepolia.base.org \
-    TEST_MNEMONIC=test test test test test test test test test test test junk \
+    TEST_MNEMONIC="test test test test test test test test test test test junk" \
     USDC_BASE_SEPOLIA=0x036CbD53842c5426634e7929541eC2318f3dCF7e \
     USDC_BASE_MAINNET=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 \
     X402_FACILITATOR_TESTNET=https://x402.org/facilitator \
@@ -23,6 +23,6 @@ RUN npm install -g @coinbase/x402 @x402/fetch @x402/axios @x402/express @x402/ho
 USER agent
 
 # Pre-warm npm cache with project-specific packages
-RUN npm cache add @coinbase/x402@latest @x402/fetch@latest @x402/axios@latest @x402/express@latest @x402/hono@latest @x402/core@latest @x402/evm@latest @coinbase/cdp-sdk@latest permissionless@latest
+RUN npm cache add @coinbase/x402@latest @x402/fetch@latest @x402/axios@latest @x402/express@latest @x402/hono@latest @x402/core@latest @x402/evm@latest @coinbase/cdp-sdk@latest permissionless@latest || true
 
 LABEL description="x402-payments infrastructure layer"

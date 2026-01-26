@@ -146,12 +146,12 @@ RUN npm install -g \
     @typechain/hardhat \
     @typechain/ethers-v6
 
-# Pre-warm npm cache
+# Pre-warm npm cache (non-fatal if packages unavailable)
 RUN npm cache add \
     fhenix-hardhat-plugin@latest \
     fhenixjs@latest \
     @fhenixprotocol/contracts@latest \
-    @openzeppelin/contracts@latest
+    @openzeppelin/contracts@latest || true
 
 USER agent
 

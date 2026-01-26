@@ -174,7 +174,7 @@ echo "  https://github.com/FhenixProtocol/cofhe-foundry-mocks"\n\
 RUN npm install -g fhenixjs ethers viem
 
 # Pre-warm npm cache
-RUN npm cache add fhenixjs@latest @openzeppelin/contracts@latest
+RUN npm cache add fhenixjs@latest @openzeppelin/contracts@latest || true
 
 USER agent
 

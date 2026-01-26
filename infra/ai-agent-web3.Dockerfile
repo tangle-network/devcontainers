@@ -12,6 +12,6 @@ RUN npm install -g @coinbase/agentkit @coinbase/cdp-sdk @x402/fetch @xmtp/xmtp-j
 USER agent
 
 # Pre-warm npm cache with project-specific packages
-RUN npm cache add @coinbase/agentkit@latest @coinbase/cdp-sdk@latest @x402/fetch@latest @xmtp/xmtp-js@latest permissionless@latest
+RUN npm cache add @coinbase/agentkit@latest @coinbase/cdp-sdk@latest @x402/fetch@latest @xmtp/xmtp-js@latest permissionless@latest || true
 
 LABEL description="ai-agent-web3 infrastructure layer"

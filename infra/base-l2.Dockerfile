@@ -3,7 +3,7 @@ FROM foundry:latest
 ENV     BASE_MAINNET_RPC=https://mainnet.base.org \
     BASE_SEPOLIA_RPC=https://sepolia.base.org \
     ENTRYPOINT_ADDRESS=0x0000000071727De22E5E9d8BAf0edAc6f37da032 \
-    TEST_MNEMONIC=test test test test test test test test test test test junk \
+    TEST_MNEMONIC="test test test test test test test test test test test junk" \
     USDC_BASE_SEPOLIA=0x036CbD53842c5426634e7929541eC2318f3dCF7e
 
 USER root
@@ -19,6 +19,6 @@ RUN npm install -g @coinbase/onchainkit @coinbase/wallet-sdk @coinbase/cdp-sdk @
 USER agent
 
 # Pre-warm npm cache with project-specific packages
-RUN npm cache add @coinbase/onchainkit@latest @coinbase/wallet-sdk@latest @coinbase/cdp-sdk@latest @coinbase/agentkit@latest frames.js@latest permissionless@latest @x402/fetch@latest @x402/axios@latest @x402/express@latest @rainbow-me/rainbowkit@latest
+RUN npm cache add @coinbase/onchainkit@latest @coinbase/wallet-sdk@latest @coinbase/cdp-sdk@latest @coinbase/agentkit@latest frames.js@latest permissionless@latest @x402/fetch@latest @x402/axios@latest @x402/express@latest @rainbow-me/rainbowkit@latest || true
 
 LABEL description="base-l2 infrastructure layer"

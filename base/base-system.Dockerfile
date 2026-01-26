@@ -123,7 +123,7 @@ RUN npm cache add \
     # Linting & formatting
     eslint@latest prettier@latest @typescript-eslint/parser@latest @typescript-eslint/eslint-plugin@latest \
     # Monorepo tools
-    turbo@latest
+    turbo@latest || true
 
 # Install Claude Code
 RUN curl -fsSL https://claude.ai/install.sh | bash

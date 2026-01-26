@@ -5,6 +5,6 @@ RUN npm install -g @coinbase/coinbase-sdk @coinbase/onchainkit @coinbase/wallet-
 USER agent
 
 # Pre-warm npm cache with project-specific packages
-RUN npm cache add @coinbase/onchainkit@latest @coinbase/wallet-sdk@latest @coinbase/cdp-sdk@latest @coinbase/agentkit@latest @x402/fetch@latest @x402/axios@latest @x402/express@latest
+RUN npm cache add @coinbase/onchainkit@latest @coinbase/wallet-sdk@latest @coinbase/cdp-sdk@latest @coinbase/agentkit@latest @x402/fetch@latest @x402/axios@latest @x402/express@latest || true
 
 LABEL description="coinbase infrastructure layer"
