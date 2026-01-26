@@ -47,8 +47,8 @@ RUN MARKSMAN_VERSION="2024-12-18" && \
 # Create default LSP configuration for agents
 # This provides baseline language server support when no user config exists
 # Languages with binaries not installed will gracefully fail to start
-RUN mkdir -p /etc/opencode && \
-    cat > /etc/opencode/opencode.config.json << 'EOFCONFIG'
+RUN mkdir -p /etc/opencode
+COPY <<'EOFCONFIG' /etc/opencode/opencode.config.json
 {
   "lsp": {
     "typescript": {
