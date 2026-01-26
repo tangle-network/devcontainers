@@ -3,7 +3,7 @@ FROM foundry:latest
 USER root
 RUN rustup target add wasm32-unknown-unknown
 
-USER project
+USER agent
 
 RUN cargo install cargo-stylus
 

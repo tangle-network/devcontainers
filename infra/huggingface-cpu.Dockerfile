@@ -6,6 +6,6 @@ RUN pip3 install --no-cache-dir --break-system-packages torch torchvision torcha
     pip3 install --no-cache-dir --break-system-packages sentencepiece protobuf && \
     python3 -c 'import transformers; print(f"Transformers {transformers.__version__}")'
 
-USER project
+USER agent
 
 LABEL description="huggingface-cpu infrastructure layer"

@@ -2,6 +2,6 @@ FROM foundry:latest
 
 USER root
 RUN npm install -g ethers viem @wagmi/core hardhat @nomicfoundation/hardhat-toolbox
-USER project
+USER agent
 
 LABEL description="ethereum infrastructure layer"

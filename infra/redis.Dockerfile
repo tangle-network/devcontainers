@@ -5,10 +5,10 @@ RUN apt-get update && apt-get install -y redis-server && rm -rf /var/lib/apt/lis
     pip3 install --no-cache-dir --break-system-packages redis hiredis && \
     redis-server --version
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g redis ioredis
-USER project
+USER agent
 
 LABEL description="redis infrastructure layer"

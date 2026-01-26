@@ -9,10 +9,10 @@ RUN pip3 install --no-cache-dir --break-system-packages hyperliquid-python-sdk &
     curl -sSL "https://binaries.hyperliquid.xyz/Testnet/hl-visor" -o /root/bin/hl-visor && chmod +x /root/bin/hl-visor || echo 'hl-visor download attempted' && \
     /root/bin/hl-visor --help || echo 'Hyperliquid SDK installed'
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g ethers viem
-USER project
+USER agent
 
 LABEL description="hyperliquid infrastructure layer"

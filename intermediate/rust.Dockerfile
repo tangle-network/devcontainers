@@ -21,6 +21,6 @@ RUN mkdir -p /tmp/cargo-warm && \
 RUN rustup component add rust-analyzer && \
     ln -sf $(rustup which --toolchain stable rust-analyzer) /usr/local/bin/rust-analyzer
 
-USER project
+USER agent
 
 LABEL description="Rust intermediate layer"

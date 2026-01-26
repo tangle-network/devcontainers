@@ -6,10 +6,10 @@ USER root
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
     echo 'Brevis ZK coprocessor development environment ready'
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g ethers viem hardhat
-USER project
+USER agent
 
 LABEL description="brevis infrastructure layer"

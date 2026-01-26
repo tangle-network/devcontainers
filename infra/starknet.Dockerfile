@@ -8,10 +8,10 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/instal
     if [ -f /root/.local/bin/snfoundryup ]; then /root/.local/bin/snfoundryup; fi && \
     pip3 install --no-cache-dir --break-system-packages starknet-py || echo 'starknet-py installed'
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g starknet
-USER project
+USER agent
 
 LABEL description="starknet infrastructure layer"

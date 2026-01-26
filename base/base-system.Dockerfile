@@ -177,7 +177,7 @@ WORKDIR /home/agent/workspace
 # Switch to agent user for safer operations
 USER agent
 
-# Verify npm and pnpm work correctly as project user
+# Verify npm and pnpm work correctly as agent user
 RUN npm --version && \
     pnpm --version && \
     node --version && \

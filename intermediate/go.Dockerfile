@@ -17,6 +17,6 @@ RUN ARCH=$(dpkg --print-architecture) && \
 RUN go install golang.org/x/tools/gopls@latest && \
     ln -sf /go/bin/gopls /usr/local/bin/gopls
 
-USER project
+USER agent
 
 LABEL description="Go intermediate layer"

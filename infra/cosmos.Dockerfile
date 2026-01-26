@@ -3,6 +3,6 @@ FROM go:latest
 USER root
 RUN curl -L https://get.ignite.com/cli | bash
 
-USER project
+USER agent
 
 LABEL description="cosmos infrastructure layer"

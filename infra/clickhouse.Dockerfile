@@ -7,10 +7,10 @@ RUN curl -fsSL https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key |
     pip3 install --no-cache-dir --break-system-packages clickhouse-connect clickhouse-driver && \
     clickhouse-client --version
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g @clickhouse/client
-USER project
+USER agent
 
 LABEL description="clickhouse infrastructure layer"

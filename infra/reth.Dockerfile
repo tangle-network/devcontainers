@@ -6,6 +6,6 @@ USER root
 RUN cargo install --git https://github.com/paradigmxyz/reth.git --locked reth && \
     reth --version
 
-USER project
+USER agent
 
 LABEL description="reth infrastructure layer"

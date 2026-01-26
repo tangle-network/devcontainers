@@ -87,7 +87,7 @@ echo "Starting Evmos daemon with FHE support..."\n\
 ' > /opt/fhenix/scripts/start-localfhenix.sh && chmod +x /opt/fhenix/scripts/start-localfhenix.sh
 
 # Create project initialization and info scripts
-RUN mkdir -p /home/project/.fhenix-foundry/scripts && \
+RUN mkdir -p /home/agent/.fhenix-foundry/scripts && \
     echo '#!/bin/bash\n\
 echo "=== Fhenix Foundry Project Setup ==="\n\
 echo ""\n\
@@ -108,8 +108,8 @@ echo "@fhenixprotocol/contracts/=lib/fhenix-contracts/contracts/"\n\
 echo "@fhenixprotocol/cofhe-foundry-mocks/=lib/cofhe-foundry-mocks/src/"\n\
 echo "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"\n\
 echo ""\n\
-echo "Done! See /home/project/.fhenix-foundry/scripts/show-info.sh for FHE development tips"\n\
-' > /home/project/.fhenix-foundry/init-project.sh && \
+echo "Done! See /home/agent/.fhenix-foundry/scripts/show-info.sh for FHE development tips"\n\
+' > /home/agent/.fhenix-foundry/init-project.sh && \
     echo '#!/bin/bash\n\
 echo "=== Fhenix Foundry Development Environment ==="\n\
 echo ""\n\
@@ -165,10 +165,10 @@ echo "=== Docs ==="\n\
 echo "  https://docs.fhenix.zone"\n\
 echo "  https://github.com/FhenixProtocol/fhenix-foundry-template"\n\
 echo "  https://github.com/FhenixProtocol/cofhe-foundry-mocks"\n\
-' > /home/project/.fhenix-foundry/scripts/show-info.sh && \
-    chmod +x /home/project/.fhenix-foundry/*.sh /home/project/.fhenix-foundry/scripts/*.sh && \
-    ln -s /opt/fhenix/scripts/start-localfhenix.sh /home/project/.fhenix-foundry/start-localfhenix.sh && \
-    chown -R project:project /home/project/.fhenix-foundry
+' > /home/agent/.fhenix-foundry/scripts/show-info.sh && \
+    chmod +x /home/agent/.fhenix-foundry/*.sh /home/agent/.fhenix-foundry/scripts/*.sh && \
+    ln -s /opt/fhenix/scripts/start-localfhenix.sh /home/agent/.fhenix-foundry/start-localfhenix.sh && \
+    chown -R agent:agent /home/agent/.fhenix-foundry
 
 # Install minimal npm packages for Fhenix JS SDK
 RUN npm install -g fhenixjs ethers viem
@@ -176,6 +176,6 @@ RUN npm install -g fhenixjs ethers viem
 # Pre-warm npm cache
 RUN npm cache add fhenixjs@latest @openzeppelin/contracts@latest
 
-USER project
+USER agent
 
 LABEL description="Fhenix Foundry development with embedded LocalFhenix (no Docker-in-Docker required)"

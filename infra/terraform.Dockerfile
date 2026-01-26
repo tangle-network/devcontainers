@@ -7,10 +7,10 @@ RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/sh
     pip3 install --no-cache-dir --break-system-packages python-terraform && \
     terraform version
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g cdktf-cli
-USER project
+USER agent
 
 LABEL description="terraform infrastructure layer"

@@ -10,10 +10,10 @@ RUN ARCH=$(uname -m) && \
     pip3 install --no-cache-dir --break-system-packages kubernetes && \
     kubectl version --client && helm version && kind version
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g @kubernetes/client-node
-USER project
+USER agent
 
 LABEL description="kubernetes infrastructure layer"

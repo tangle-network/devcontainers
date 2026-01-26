@@ -23,7 +23,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.
          echo 'Solana CLI not installed - platform may not be supported'; \
        fi
 
-USER project
+USER agent
 
 LABEL description="Combined: coinbase, ethereum, solana (custom)"
 

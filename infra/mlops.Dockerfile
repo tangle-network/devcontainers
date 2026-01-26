@@ -7,6 +7,6 @@ RUN pip3 install --no-cache-dir --break-system-packages mlflow wandb && \
     pip3 install --no-cache-dir --break-system-packages onnx onnxruntime && \
     mlflow --version && wandb --version
 
-USER project
+USER agent
 
 LABEL description="mlops infrastructure layer"

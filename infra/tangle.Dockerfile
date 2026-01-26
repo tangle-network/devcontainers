@@ -2,7 +2,7 @@ FROM rust:latest
 
 USER root
 RUN npm install -g @tangle-network/tangle-substrate-types
-USER project
+USER agent
 
 RUN cargo install subxt-cli --version 0.39.0
 

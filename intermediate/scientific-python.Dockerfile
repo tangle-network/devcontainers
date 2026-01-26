@@ -13,6 +13,6 @@ RUN pip3 install --no-cache-dir --break-system-packages \
     python-dotenv PyYAML toml \
     && jupyter --version
 
-USER project
+USER agent
 
 LABEL description="Scientific Python intermediate layer (NumPy, SciPy, Pandas, Jupyter, ML basics)"

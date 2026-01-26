@@ -8,10 +8,10 @@ RUN ARCH=$(uname -m) && \
     pip3 install --no-cache-dir --break-system-packages minio boto3 && \
     minio --version && mc --version
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g minio @aws-sdk/client-s3
-USER project
+USER agent
 
 LABEL description="minio infrastructure layer"

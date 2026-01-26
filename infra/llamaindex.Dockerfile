@@ -8,6 +8,6 @@ RUN pip3 install --no-cache-dir --break-system-packages llama-index && \
     pip3 install --no-cache-dir --break-system-packages chromadb sentence-transformers && \
     python3 -c 'import llama_index; print(f"LlamaIndex installed")'
 
-USER project
+USER agent
 
 LABEL description="llamaindex infrastructure layer"

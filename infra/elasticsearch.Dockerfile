@@ -6,7 +6,7 @@ RUN apt-get update && \
       default-jdk && \
     rm -rf /var/lib/apt/lists/*
 
-USER project
+USER agent
 
 USER root
 RUN curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg && \
@@ -15,10 +15,10 @@ RUN curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | gpg --dearmo
     pip3 install --no-cache-dir --break-system-packages elasticsearch && \
     echo 'Elasticsearch installed (run with: systemctl start elasticsearch)'
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g @elastic/elasticsearch elasticsearch
-USER project
+USER agent
 
 LABEL description="elasticsearch infrastructure layer"

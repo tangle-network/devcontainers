@@ -6,17 +6,17 @@ RUN apt-get update && \
       postgresql postgresql-contrib libpq-dev && \
     rm -rf /var/lib/apt/lists/*
 
-USER project
+USER agent
 
 USER root
 RUN apt-get update && apt-get install -y postgresql-16-pgvector && rm -rf /var/lib/apt/lists/* && \
     pip3 install --no-cache-dir --break-system-packages pgvector psycopg2-binary sqlalchemy && \
     echo 'PostgreSQL with pgvector extension installed'
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g pg pgvector @types/pg
-USER project
+USER agent
 
 LABEL description="pgvector infrastructure layer"

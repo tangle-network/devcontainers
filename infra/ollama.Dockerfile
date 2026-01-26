@@ -4,10 +4,10 @@ USER root
 RUN curl -fsSL https://ollama.ai/install.sh | sh && \
     ollama --version || echo 'Ollama installed'
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g ollama
-USER project
+USER agent
 
 LABEL description="ollama infrastructure layer"

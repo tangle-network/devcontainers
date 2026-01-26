@@ -6,6 +6,6 @@ USER root
 RUN cargo install cargo-risczero && \
     cargo risczero install || echo 'RISC Zero toolchain installed'
 
-USER project
+USER agent
 
 LABEL description="risc0 infrastructure layer"

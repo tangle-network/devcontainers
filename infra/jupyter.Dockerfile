@@ -6,6 +6,6 @@ RUN pip3 install --no-cache-dir --break-system-packages jupyterlab-git jupyterla
     pip3 install --no-cache-dir --break-system-packages ipywidgets plotly bokeh altair && \
     jupyter lab --version
 
-USER project
+USER agent
 
 LABEL description="jupyter infrastructure layer"

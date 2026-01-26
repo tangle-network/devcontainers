@@ -6,7 +6,7 @@ RUN apt-get update && \
       default-jdk && \
     rm -rf /var/lib/apt/lists/*
 
-USER project
+USER agent
 
 USER root
 RUN curl -sSL https://downloads.apache.org/kafka/3.7.0/kafka_2.13-3.7.0.tgz | tar -xz -C /opt && \
@@ -16,10 +16,10 @@ RUN curl -sSL https://downloads.apache.org/kafka/3.7.0/kafka_2.13-3.7.0.tgz | ta
     echo 'export PATH=$PATH:/opt/kafka/bin' >> /etc/profile.d/kafka.sh && \
     /opt/kafka/bin/kafka-topics.sh --version || echo 'Kafka installed'
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g kafkajs @confluentinc/kafka-javascript
-USER project
+USER agent
 
 LABEL description="kafka infrastructure layer"

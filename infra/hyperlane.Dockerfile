@@ -8,10 +8,10 @@ RUN curl -L https://foundry.paradigm.xyz | bash && /root/.foundry/bin/foundryup 
     validator --help || echo 'Hyperlane validator installed' && \
     relayer --help || echo 'Hyperlane relayer installed'
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g @hyperlane-xyz/sdk @hyperlane-xyz/core @hyperlane-xyz/utils @hyperlane-xyz/cli ethers viem
-USER project
+USER agent
 
 LABEL description="hyperlane infrastructure layer"

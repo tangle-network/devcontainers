@@ -6,7 +6,7 @@ RUN apt-get update && \
       gnupg && \
     rm -rf /var/lib/apt/lists/*
 
-USER project
+USER agent
 
 USER root
 RUN curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg && \
@@ -15,10 +15,10 @@ RUN curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg --dearmor
     mkdir -p /data/db && chmod 777 /data/db && \
     mongod --version
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g mongodb mongoose
-USER project
+USER agent
 
 LABEL description="mongodb infrastructure layer"

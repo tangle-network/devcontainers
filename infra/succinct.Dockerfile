@@ -6,6 +6,6 @@ USER root
 RUN curl -L https://sp1.succinct.xyz | bash && \
     if [ -f /root/.sp1/bin/sp1up ]; then /root/.sp1/bin/sp1up; cargo prove --version; else echo 'SP1 not installed'; fi
 
-USER project
+USER agent
 
 LABEL description="succinct infrastructure layer"

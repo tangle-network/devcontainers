@@ -8,12 +8,12 @@ RUN apt-get update && \
       python3-pip && \
     rm -rf /var/lib/apt/lists/*
 
-USER project
+USER agent
 
 USER root
 RUN cargo install --git https://github.com/aptos-labs/aptos-core.git aptos --locked && \
     aptos --version || echo 'Aptos CLI installed'
 
-USER project
+USER agent
 
 LABEL description="aptos infrastructure layer"

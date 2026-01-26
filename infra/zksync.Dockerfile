@@ -7,10 +7,10 @@ RUN curl -L https://raw.githubusercontent.com/matter-labs/foundry-zksync/main/in
     curl -L https://raw.githubusercontent.com/matter-labs/anvil-zksync/main/scripts/install.sh | bash && chmod -R a+rx /root/.anvil-zksync || echo 'anvil-zksync installed' && \
     forge --version && cast --version || echo 'foundry-zksync installed'
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g zksync-ethers ethers zksync-cli hardhat @matterlabs/hardhat-zksync
-USER project
+USER agent
 
 LABEL description="zksync infrastructure layer"

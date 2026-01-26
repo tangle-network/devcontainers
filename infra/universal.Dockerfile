@@ -13,7 +13,7 @@ RUN apt-get update && \
       default-jdk maven gradle php php-cli php-mbstring php-xml ruby ruby-dev unzip && \
     rm -rf /var/lib/apt/lists/*
 
-USER project
+USER agent
 
 USER root
 RUN ARCH=$(dpkg --print-architecture) && if [ "$ARCH" = "amd64" ]; then GO_ARCH="amd64"; elif [ "$ARCH" = "arm64" ]; then GO_ARCH="arm64"; else echo "Unsupported architecture: $ARCH"; exit 1; fi && curl -fsSL https://go.dev/dl/go1.22.0.linux-${GO_ARCH}.tar.gz | tar -C /usr/local -xzf - && mkdir -p /go/bin /go/pkg /go/src && chmod -R a+w /go && \
@@ -22,13 +22,13 @@ RUN ARCH=$(dpkg --print-architecture) && if [ "$ARCH" = "amd64" ]; then GO_ARCH=
     gem install bundler && \
     KOTLIN_VERSION=$(curl -s https://api.github.com/repos/JetBrains/kotlin/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/') && curl -sL https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip -o kotlin.zip && unzip -q kotlin.zip -d /opt && rm kotlin.zip && chmod -R a+rx /opt/kotlinc && \
     pip3 install --no-cache-dir --break-system-packages poetry black mypy ruff pipx && \
-    su - project -c 'go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest' && \
-    su - project -c 'go install golang.org/x/tools/gopls@latest'
+    su - agent -c 'go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest' && \
+    su - agent -c 'go install golang.org/x/tools/gopls@latest'
 
-USER project
+USER agent
 
 USER root
 RUN npm install -g typescript ts-node @types/node eslint prettier nodemon dotenv
-USER project
+USER agent
 
 LABEL description="universal infrastructure layer"

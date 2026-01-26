@@ -87,7 +87,7 @@ echo "Starting Evmos daemon with FHE support..."\n\
 ' > /opt/fhenix/scripts/start-localfhenix.sh && chmod +x /opt/fhenix/scripts/start-localfhenix.sh
 
 # Create info script
-RUN mkdir -p /home/project/.fhenix-dev/scripts && \
+RUN mkdir -p /home/agent/.fhenix-dev/scripts && \
     echo '#!/bin/bash\n\
 echo "=== Fhenix FHE Development Environment ==="\n\
 echo ""\n\
@@ -123,10 +123,10 @@ echo "  3. Compute: euint32 result = FHE.add(secret, FHE.asEuint32(10));"\n\
 echo ""\n\
 echo "=== Docs ==="\n\
 echo "  https://docs.fhenix.zone"\n\
-' > /home/project/.fhenix-dev/scripts/show-info.sh && \
-    chmod +x /home/project/.fhenix-dev/scripts/show-info.sh && \
-    ln -s /opt/fhenix/scripts/start-localfhenix.sh /home/project/.fhenix-dev/start-localfhenix.sh && \
-    chown -R project:project /home/project/.fhenix-dev
+' > /home/agent/.fhenix-dev/scripts/show-info.sh && \
+    chmod +x /home/agent/.fhenix-dev/scripts/show-info.sh && \
+    ln -s /opt/fhenix/scripts/start-localfhenix.sh /home/agent/.fhenix-dev/start-localfhenix.sh && \
+    chown -R agent:agent /home/agent/.fhenix-dev
 
 # Install Hardhat and Fhenix npm packages
 RUN npm install -g \
@@ -153,6 +153,6 @@ RUN npm cache add \
     @fhenixprotocol/contracts@latest \
     @openzeppelin/contracts@latest
 
-USER project
+USER agent
 
 LABEL description="Fhenix Hardhat development with embedded LocalFhenix (no Docker-in-Docker required)"
