@@ -1,9 +1,10 @@
 FROM rust:latest
 
+# Tangle v2 - no substrate dependencies required
+# blueprint-sdk v2 is substrate-free
+
 USER root
-RUN npm install -g @tangle-network/tangle-substrate-types
+RUN npm install -g @anthropic-ai/sdk
 USER agent
 
-RUN cargo install subxt-cli --version 0.39.0
-
-LABEL description="tangle infrastructure layer"
+LABEL description="tangle infrastructure layer (v2, substrate-free)"

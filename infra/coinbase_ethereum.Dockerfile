@@ -1,4 +1,4 @@
-FROM base-system:latest
+FROM foundry:latest
 
 USER root
 RUN npm install -g @coinbase/coinbase-sdk ethers viem @wagmi/core

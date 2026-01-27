@@ -20,9 +20,10 @@ RUN mkdir -p /home/agent/.x402-dev/scripts && \
 
 USER root
 RUN npm install -g @coinbase/x402 @x402/fetch @x402/axios @x402/express @x402/hono @x402/core @x402/evm @coinbase/cdp-sdk @coinbase/wallet-sdk viem wagmi ethers hono express localtunnel
-USER agent
 
-# Pre-warm npm cache with project-specific packages
+# Pre-warm npm cache with project-specific packages (run as root to avoid permission issues)
 RUN npm cache add @coinbase/x402@latest @x402/fetch@latest @x402/axios@latest @x402/express@latest @x402/hono@latest @x402/core@latest @x402/evm@latest @coinbase/cdp-sdk@latest permissionless@latest || true
+
+USER agent
 
 LABEL description="x402-payments infrastructure layer"
