@@ -195,6 +195,7 @@ jobs:
       fail-fast: false
       matrix:
         image:
+          - ai-sdk
           - clickhouse
           - convex
           - elasticsearch
@@ -385,6 +386,7 @@ jobs:
           - arbitrum
           - base-aa
           - base-l2
+          - biconomy
           - brevis
           - chainlink
           - coinbase
@@ -407,6 +409,7 @@ jobs:
           - soneium
           - stylus
           - tempo
+          - worldcoin
           - x402-payments
     steps:
       - name: Checkout
