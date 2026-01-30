@@ -1,10 +1,10 @@
 FROM foundry:latest
 
 USER root
-RUN rustup target add wasm32-unknown-unknown
+RUN rustup target add wasm32-unknown-unknown && \
+    cargo install cargo-stylus && \
+    chmod -R a+w /usr/local/cargo
 
 USER agent
-
-RUN cargo install cargo-stylus
 
 LABEL description="stylus infrastructure layer"
