@@ -12,12 +12,12 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Node.js 22 + package managers + common tools
+# Note: opencode-ai is installed by the sidecar, not here
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
     && npm install -g corepack \
     && corepack prepare pnpm yarn --activate \
     && npm install -g patch-package vite tsx turbo typescript @types/node node-pty \
-    && npm install -g opencode-ai \
     && rm -rf /var/lib/apt/lists/*
 
 # LSP servers for code intelligence
