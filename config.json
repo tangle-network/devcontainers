@@ -421,7 +421,7 @@
                 "root_commands": [
                     "pip3 install --no-cache-dir --break-system-packages hyperliquid-python-sdk",
                     "mkdir -p /root/bin && curl -sSL https://binaries.hyperliquid.xyz/Testnet/hl-visor -o /root/bin/hl-visor && chmod +x /root/bin/hl-visor",
-                    "git clone --depth 1 https://github.com/hyperliquid-dex/node.git /opt/hyperliquid-node && chmod -R a+r /opt/hyperliquid-node",
+                    "git clone https://github.com/hyperliquid-dex/node.git /opt/hyperliquid-node && cd /opt/hyperliquid-node && git checkout 8a2c4b9e5757aafae5079f8236e3bf6752f7d81b && chmod -R a+r /opt/hyperliquid-node",
                     "/root/bin/hl-visor --help || echo 'Hyperliquid visor installed'"
                 ]
             }
@@ -466,9 +466,9 @@
                     "gnupg"
                 ],
                 "root_commands": [
-                    "curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg",
-                    "echo 'deb [ signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu noble/mongodb-org/7.0 multiverse' | tee /etc/apt/sources.list.d/mongodb-org-7.0.list",
-                    "apt-get update && apt-get install -y mongodb-org && rm -rf /var/lib/apt/lists/*",
+                    "curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg",
+                    "echo 'deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/8.0 multiverse' | tee /etc/apt/sources.list.d/mongodb-org-8.0.list",
+                    "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org && rm -rf /var/lib/apt/lists/*",
                     "mkdir -p /data/db && chmod 777 /data/db",
                     "mongod --version"
                 ]
@@ -562,8 +562,8 @@
                     "PATH": "/root/.tempo/bin:/root/.foundry/bin:/usr/local/cargo/bin:$PATH"
                 },
                 "root_commands": [
-                    "git clone --depth 1 https://github.com/tempoxyz/tempo.git /tmp/tempo && cd /tmp/tempo && cargo build --release && mkdir -p /root/.tempo/bin && cp target/release/tempo* /root/.tempo/bin/ 2>/dev/null || echo 'Tempo binaries copied' && chmod -R a+rx /root/.tempo && rm -rf /tmp/tempo",
-                    "echo 'Tempo node built from https://github.com/tempoxyz/tempo'"
+                    "git clone https://github.com/tempoxyz/tempo.git /tmp/tempo && cd /tmp/tempo && git checkout 7e2c66842c2ef99e3f0670c63d9b92df20195af6 && cargo build --release && mkdir -p /root/.tempo/bin && cp target/release/tempo* /root/.tempo/bin/ 2>/dev/null || echo 'Tempo binaries copied' && chmod -R a+rx /root/.tempo && rm -rf /tmp/tempo",
+                    "echo 'Tempo node built from https://github.com/tempoxyz/tempo at 7e2c66842c2ef99e3f0670c63d9b92df20195af6'"
                 ]
             }
         },
@@ -876,7 +876,7 @@
                 "root_commands": [
                     "curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg",
                     "echo 'deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main' | tee /etc/apt/sources.list.d/elastic-8.x.list",
-                    "apt-get update && apt-get install -y elasticsearch && rm -rf /var/lib/apt/lists/*",
+                    "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y elasticsearch && rm -rf /var/lib/apt/lists/*",
                     "pip3 install --no-cache-dir --break-system-packages elasticsearch",
                     "echo 'Elasticsearch installed (run with: systemctl start elasticsearch)'"
                 ]
@@ -893,7 +893,7 @@
                 "root_commands": [
                     "curl -fsSL https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key | gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg",
                     "echo 'deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main' | tee /etc/apt/sources.list.d/clickhouse.list",
-                    "apt-get update && apt-get install -y clickhouse-server clickhouse-client && rm -rf /var/lib/apt/lists/*",
+                    "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y clickhouse-server clickhouse-client && rm -rf /var/lib/apt/lists/*",
                     "pip3 install --no-cache-dir --break-system-packages clickhouse-connect clickhouse-driver",
                     "clickhouse-client --version"
                 ]
