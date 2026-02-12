@@ -1236,6 +1236,28 @@
                     "echo 'Brevis ZK coprocessor development environment ready'"
                 ]
             }
+        },
+        "xlayer": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "viem",
+                    "wagmi",
+                    "@eth-optimism/sdk",
+                    "ethers"
+                ]
+            }
+        },
+        "blockscout": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "axios",
+                    "viem",
+                    "ethers",
+                    "@evmexplorer/blockscout"
+                ]
+            }
         }
     }
 }
