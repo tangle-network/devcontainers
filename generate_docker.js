@@ -62,6 +62,22 @@ function formatEnvValue(value) {
     return /\s/.test(stringValue) ? JSON.stringify(stringValue) : stringValue;
 }
 
+function normalizeRootCommand(command) {
+    if (typeof command !== 'string') {
+        return command;
+    }
+
+    if (!command.includes('apt-get install')) {
+        return command;
+    }
+
+    if (command.includes('DEBIAN_FRONTEND=noninteractive apt-get install')) {
+        return command;
+    }
+
+    return command.replace(/apt-get\s+install/g, 'DEBIAN_FRONTEND=noninteractive apt-get install');
+}
+
 function buildCargoInstallCommand(pkg) {
     if (typeof pkg === 'string') {
         if (pkg.includes('@')) {
@@ -154,7 +170,9 @@ function generateInfraDockerfile(project, config, outputDir) {
     if (customInstall && customInstall.root_commands && customInstall.root_commands.length > 0) {
         dockerfileLines.push(`\nUSER root\n`);
         dockerfileLines.push(`RUN `);
-        const commands = customInstall.root_commands.join(' && \\\n    ');
+        const commands = customInstall.root_commands
+            .map(normalizeRootCommand)
+            .join(' && \\\n    ');
         dockerfileLines.push(`${commands}\n`);
         dockerfileLines.push(`\nUSER agent\n`);
     }
@@ -291,7 +309,9 @@ function generateCombinedDockerfile(projectNames, outputDir) {
     if (allRootCommands.length > 0) {
         dockerfileLines.push(`\nUSER root\n`);
         dockerfileLines.push(`RUN `);
-        const commands = allRootCommands.join(' && \\\n    ');
+        const commands = allRootCommands
+            .map(normalizeRootCommand)
+            .join(' && \\\n    ');
         dockerfileLines.push(`${commands}\n`);
         dockerfileLines.push(`\nUSER agent\n`);
     }
