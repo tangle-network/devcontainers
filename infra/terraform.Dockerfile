@@ -5,7 +5,7 @@ RUN curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/sh
     echo 'deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com noble main' | tee /etc/apt/sources.list.d/hashicorp.list && \
     apt-get update && apt-get install -y terraform && rm -rf /var/lib/apt/lists/* && \
     curl -sSL https://get.opentofu.org/install-opentofu.sh | bash -s -- --install-method deb && \
-    pip3 install --no-cache-dir python-terraform && \
+    pip3 install --no-cache-dir --break-system-packages python-terraform && \
     terraform version && tofu version
 
 USER agent

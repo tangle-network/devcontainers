@@ -16,7 +16,10 @@ RUN mkdir -p /tmp/cargo-warm && \
     printf '[package]\nname = "warm"\nversion = "0.0.0"\nedition = "2021"\n\n[dependencies]\nsolana-program = "1"\nanchor-lang = "0.30"\nspl-token = "4"\n' > /tmp/cargo-warm/Cargo.toml && \
     mkdir -p /tmp/cargo-warm/src && echo 'fn main() {}' > /tmp/cargo-warm/src/main.rs && \
     cd /tmp/cargo-warm && cargo fetch && \
-    rm -rf /tmp/cargo-warm && \
-    chmod -R a+w $CARGO_HOME
+    rm -rf /tmp/cargo-warm
+
+USER root
+RUN chmod -R a+w $CARGO_HOME
+USER agent
 
 LABEL description="solana infrastructure layer"

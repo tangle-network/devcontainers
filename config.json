@@ -60,16 +60,14 @@
         "risc0": {
             "base": "rust",
             "packages": {
-                "cargo": [
-                    "cargo-risczero"
-                ]
+                "cargo": []
             },
             "custom_install": {
                 "env": {
-                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                    "PATH": "/root/.risc0/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
                 },
                 "root_commands": [
-                    "cargo risczero install || echo 'RISC Zero toolchain installed'"
+                    "cargo install cargo-risczero && cargo risczero install || echo 'RISC Zero toolchain installed'"
                 ]
             }
         },
@@ -315,9 +313,9 @@
                     "curl -sSL https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer",
                     "gem install bundler",
                     "KOTLIN_VERSION=$(curl -s https://api.github.com/repos/JetBrains/kotlin/releases/latest | grep '\"tag_name\"' | sed -E 's/.*\"v([^\"]+)\".*/\\1/') && curl -sL https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip -o kotlin.zip && unzip -q kotlin.zip -d /opt && rm kotlin.zip && chmod -R a+rx /opt/kotlinc",
-                    "pip3 install --no-cache-dir poetry black mypy ruff pipx",
-                    "su - project -c 'go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest'",
-                    "su - project -c 'go install golang.org/x/tools/gopls@latest'"
+                    "pip3 install --no-cache-dir --break-system-packages poetry black mypy ruff pipx",
+                    "su - agent -c 'export PATH=/usr/local/go/bin:/go/bin:$PATH GOPATH=/go && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest'",
+                    "su - agent -c 'export PATH=/usr/local/go/bin:/go/bin:$PATH GOPATH=/go && go install golang.org/x/tools/gopls@latest'"
                 ]
             }
         },
@@ -416,7 +414,7 @@
                     "PATH": "/root/bin:/usr/local/cargo/bin:$PATH"
                 },
                 "root_commands": [
-                    "pip3 install --no-cache-dir hyperliquid-python-sdk",
+                    "pip3 install --no-cache-dir --break-system-packages hyperliquid-python-sdk",
                     "mkdir -p /root/bin && curl -sSL https://binaries.hyperliquid.xyz/Testnet/hl-visor -o /root/bin/hl-visor && chmod +x /root/bin/hl-visor",
                     "git clone --depth 1 https://github.com/hyperliquid-dex/node.git /opt/hyperliquid-node && chmod -R a+r /opt/hyperliquid-node",
                     "/root/bin/hl-visor --help || echo 'Hyperliquid visor installed'"
@@ -526,7 +524,7 @@
                     "curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh",
                     "curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh",
                     "if [ -f /root/.local/bin/snfoundryup ]; then /root/.local/bin/snfoundryup; fi",
-                    "pip3 install --no-cache-dir cairo-lang starknet-py"
+                    "pip3 install --no-cache-dir --break-system-packages cairo-lang starknet-py"
                 ]
             }
         },
@@ -600,7 +598,7 @@
             "custom_install": {
                 "root_commands": [
                     "npm install -g @ton-community/func-js",
-                    "pip3 install --no-cache-dir toncli || echo 'toncli installed'"
+                    "pip3 install --no-cache-dir --break-system-packages toncli || echo 'toncli installed'"
                 ]
             }
         },
@@ -750,7 +748,7 @@
             },
             "custom_install": {
                 "root_commands": [
-                    "pip3 install --no-cache-dir qdrant-client",
+                    "pip3 install --no-cache-dir --break-system-packages qdrant-client",
                     "cargo install qdrant || (curl -sSL https://github.com/qdrant/qdrant/releases/latest/download/qdrant-x86_64-unknown-linux-gnu.tar.gz | tar -xz -C /usr/local/bin || echo 'Qdrant binary installation')",
                     "qdrant --version || echo 'Qdrant installed'"
                 ]
@@ -788,7 +786,7 @@
                 ],
                 "root_commands": [
                     "apt-get update && apt-get install -y postgresql-16-pgvector && rm -rf /var/lib/apt/lists/*",
-                    "pip3 install --no-cache-dir pgvector psycopg2-binary sqlalchemy",
+                    "pip3 install --no-cache-dir --break-system-packages pgvector psycopg2-binary sqlalchemy",
                     "echo 'PostgreSQL with pgvector extension installed'"
                 ]
             }
@@ -798,7 +796,7 @@
             "packages": {},
             "custom_install": {
                 "root_commands": [
-                    "pip3 install --no-cache-dir pymilvus",
+                    "pip3 install --no-cache-dir --break-system-packages pymilvus",
                     "curl -sSL https://raw.githubusercontent.com/milvus-io/milvus/master/scripts/standalone_embed.sh -o /usr/local/bin/milvus-standalone.sh && chmod +x /usr/local/bin/milvus-standalone.sh",
                     "python3 -c 'from pymilvus import connections; print(\"PyMilvus installed\")'"
                 ]
@@ -814,7 +812,7 @@
             },
             "custom_install": {
                 "root_commands": [
-                    "pip3 install --no-cache-dir weaviate-client",
+                    "pip3 install --no-cache-dir --break-system-packages weaviate-client",
                     "python3 -c 'import weaviate; print(f\"Weaviate client {weaviate.__version__}\")'"
                 ]
             }
@@ -831,7 +829,7 @@
             "custom_install": {
                 "root_commands": [
                     "apt-get update && apt-get install -y redis-server && rm -rf /var/lib/apt/lists/*",
-                    "pip3 install --no-cache-dir redis hiredis",
+                    "pip3 install --no-cache-dir --break-system-packages redis hiredis",
                     "redis-server --version"
                 ]
             }
@@ -852,7 +850,7 @@
                     "curl -sSL https://downloads.apache.org/kafka/3.7.0/kafka_2.13-3.7.0.tgz | tar -xz -C /opt",
                     "ln -s /opt/kafka_2.13-3.7.0 /opt/kafka",
                     "chmod -R a+rx /opt/kafka",
-                    "pip3 install --no-cache-dir kafka-python confluent-kafka",
+                    "pip3 install --no-cache-dir --break-system-packages kafka-python confluent-kafka",
                     "echo 'export PATH=$PATH:/opt/kafka/bin' >> /etc/profile.d/kafka.sh",
                     "/opt/kafka/bin/kafka-topics.sh --version || echo 'Kafka installed'"
                 ]
@@ -874,7 +872,7 @@
                     "curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg",
                     "echo 'deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main' | tee /etc/apt/sources.list.d/elastic-8.x.list",
                     "apt-get update && apt-get install -y elasticsearch && rm -rf /var/lib/apt/lists/*",
-                    "pip3 install --no-cache-dir elasticsearch",
+                    "pip3 install --no-cache-dir --break-system-packages elasticsearch",
                     "echo 'Elasticsearch installed (run with: systemctl start elasticsearch)'"
                 ]
             }
@@ -891,7 +889,7 @@
                     "curl -fsSL https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key | gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg",
                     "echo 'deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main' | tee /etc/apt/sources.list.d/clickhouse.list",
                     "apt-get update && apt-get install -y clickhouse-server clickhouse-client && rm -rf /var/lib/apt/lists/*",
-                    "pip3 install --no-cache-dir clickhouse-connect clickhouse-driver",
+                    "pip3 install --no-cache-dir --break-system-packages clickhouse-connect clickhouse-driver",
                     "clickhouse-client --version"
                 ]
             }
@@ -906,9 +904,9 @@
             },
             "custom_install": {
                 "root_commands": [
-                    "curl -sSL https://dl.min.io/server/minio/release/linux-amd64/minio -o /usr/local/bin/minio && chmod +x /usr/local/bin/minio",
-                    "curl -sSL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc && chmod +x /usr/local/bin/mc",
-                    "pip3 install --no-cache-dir minio boto3",
+                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -sSL \"https://dl.min.io/server/minio/release/linux-${ARCH}/minio\" -o /usr/local/bin/minio && chmod +x /usr/local/bin/minio",
+                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -sSL \"https://dl.min.io/client/mc/release/linux-${ARCH}/mc\" -o /usr/local/bin/mc && chmod +x /usr/local/bin/mc",
+                    "pip3 install --no-cache-dir --break-system-packages minio boto3",
                     "minio --version && mc --version"
                 ]
             }
@@ -922,12 +920,12 @@
             },
             "custom_install": {
                 "root_commands": [
-                    "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\" && install kubectl /usr/local/bin/kubectl && rm kubectl",
+                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${ARCH}/kubectl\" && install kubectl /usr/local/bin/kubectl && rm kubectl",
                     "curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash",
-                    "curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64 && chmod +x /usr/local/bin/kind",
-                    "curl -Lo /usr/local/bin/k9s.tar.gz https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_amd64.tar.gz && tar -xzf /usr/local/bin/k9s.tar.gz -C /usr/local/bin k9s && rm /usr/local/bin/k9s.tar.gz",
-                    "curl -Lo /usr/local/bin/kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/latest/download/kustomize_v5.4.1_linux_amd64.tar.gz && tar -xzf /usr/local/bin/kustomize.tar.gz -C /usr/local/bin && rm /usr/local/bin/kustomize.tar.gz",
-                    "pip3 install --no-cache-dir kubernetes",
+                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -Lo /usr/local/bin/kind \"https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-${ARCH}\" && chmod +x /usr/local/bin/kind",
+                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -Lo /usr/local/bin/k9s.tar.gz \"https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_${ARCH}.tar.gz\" && tar -xzf /usr/local/bin/k9s.tar.gz -C /usr/local/bin k9s && rm /usr/local/bin/k9s.tar.gz",
+                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -Lo /usr/local/bin/kustomize.tar.gz \"https://github.com/kubernetes-sigs/kustomize/releases/latest/download/kustomize_v5.4.1_linux_${ARCH}.tar.gz\" && tar -xzf /usr/local/bin/kustomize.tar.gz -C /usr/local/bin && rm /usr/local/bin/kustomize.tar.gz",
+                    "pip3 install --no-cache-dir --break-system-packages kubernetes",
                     "kubectl version --client && helm version && kind version && k9s version"
                 ]
             }
@@ -947,7 +945,7 @@
                     "echo 'deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com noble main' | tee /etc/apt/sources.list.d/hashicorp.list",
                     "apt-get update && apt-get install -y terraform && rm -rf /var/lib/apt/lists/*",
                     "curl -sSL https://get.opentofu.org/install-opentofu.sh | bash -s -- --install-method deb",
-                    "pip3 install --no-cache-dir python-terraform",
+                    "pip3 install --no-cache-dir --break-system-packages python-terraform",
                     "terraform version && tofu version"
                 ]
             }
@@ -967,7 +965,7 @@
                 "root_commands": [
                     "curl -fsSL https://get.pulumi.com | sh",
                     "mv /root/.pulumi/bin/* /usr/local/bin/",
-                    "pip3 install --no-cache-dir pulumi pulumi-aws pulumi-gcp pulumi-kubernetes",
+                    "pip3 install --no-cache-dir --break-system-packages pulumi pulumi-aws pulumi-gcp pulumi-kubernetes",
                     "pulumi version"
                 ]
             }

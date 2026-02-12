@@ -21,9 +21,9 @@ RUN ARCH=$(dpkg --print-architecture) && if [ "$ARCH" = "amd64" ]; then GO_ARCH=
     curl -sSL https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
     gem install bundler && \
     KOTLIN_VERSION=$(curl -s https://api.github.com/repos/JetBrains/kotlin/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/') && curl -sL https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip -o kotlin.zip && unzip -q kotlin.zip -d /opt && rm kotlin.zip && chmod -R a+rx /opt/kotlinc && \
-    pip3 install --no-cache-dir poetry black mypy ruff pipx && \
-    su - project -c 'go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest' && \
-    su - project -c 'go install golang.org/x/tools/gopls@latest'
+    pip3 install --no-cache-dir --break-system-packages poetry black mypy ruff pipx && \
+    su - agent -c 'export PATH=/usr/local/go/bin:/go/bin:$PATH GOPATH=/go && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest' && \
+    su - agent -c 'export PATH=/usr/local/go/bin:/go/bin:$PATH GOPATH=/go && go install golang.org/x/tools/gopls@latest'
 
 USER agent
 

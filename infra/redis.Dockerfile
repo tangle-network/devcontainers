@@ -2,7 +2,7 @@ FROM base-system:latest
 
 USER root
 RUN apt-get update && apt-get install -y redis-server && rm -rf /var/lib/apt/lists/* && \
-    pip3 install --no-cache-dir redis hiredis && \
+    pip3 install --no-cache-dir --break-system-packages redis hiredis && \
     redis-server --version
 
 USER agent

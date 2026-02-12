@@ -13,6 +13,6 @@ RUN npm install -g langchain @langchain/core @langchain/openai @langchain/anthro
 USER agent
 
 # Pre-warm pip cache with project-specific packages
-RUN pip download --break-system-packages --dest /tmp/pip-warm openai anthropic tiktoken chromadb sentence-transformers && rm -rf /tmp/pip-warm
+RUN pip download --dest /tmp/pip-warm openai anthropic tiktoken chromadb sentence-transformers && rm -rf /tmp/pip-warm
 
 LABEL description="langchain infrastructure layer"

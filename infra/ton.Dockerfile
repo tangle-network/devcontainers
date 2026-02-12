@@ -2,7 +2,7 @@ FROM base-system:latest
 
 USER root
 RUN npm install -g @ton-community/func-js && \
-    pip3 install --no-cache-dir toncli || echo 'toncli installed'
+    pip3 install --no-cache-dir --break-system-packages toncli || echo 'toncli installed'
 
 USER agent
 
