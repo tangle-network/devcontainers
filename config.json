@@ -1255,10 +1255,6 @@
                     "@okxweb3/crypto-lib",
                     "@okxweb3/hardhat-explorer-verify",
                     "@okxweb3/dex-widget",
-                    "@maticnetwork/maticjs",
-                    "@maticnetwork/maticjs-ethers",
-                    "@maticnetwork/maticjs-web3",
-                    "@maticnetwork/fx-portal",
                     "hardhat",
                     "@nomicfoundation/hardhat-toolbox"
                 ]
