@@ -55,6 +55,11 @@ function generateCacheWarmCommands(cacheWarm) {
     return commands.length > 0 ? '\n' + commands.join('\n') + '\n' : '';
 }
 
+function formatEnvValue(value) {
+    const stringValue = String(value);
+    return /\s/.test(stringValue) ? JSON.stringify(stringValue) : stringValue;
+}
+
 function generateIntermediateDockerfile(base, outputDir) {
     if (!(base in INTERMEDIATE_TEMPLATES)) {
         throw new Error(`Unknown base: ${base}`);
@@ -76,7 +81,7 @@ function generateInfraDockerfile(project, config, outputDir) {
     if (customInstall && customInstall.env) {
         dockerfileLines.push('\n');
         const envVars = Object.entries(customInstall.env)
-            .map(([key, value]) => `    ${key}=${value}`)
+            .map(([key, value]) => `    ${key}=${formatEnvValue(value)}`)
             .join(' \\\n');
         dockerfileLines.push(`ENV ${envVars}\n`);
     }
@@ -88,7 +93,7 @@ function generateInfraDockerfile(project, config, outputDir) {
         dockerfileLines.push(`    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \\\n`);
         dockerfileLines.push(`      ${aptPackages} && \\\n`);
         dockerfileLines.push(`    rm -rf /var/lib/apt/lists/*\n`);
-        dockerfileLines.push(`\nUSER project\n`);
+        dockerfileLines.push(`\nUSER agent\n`);
     }
     
     if (customInstall && customInstall.root_commands && customInstall.root_commands.length > 0) {
@@ -96,7 +101,7 @@ function generateInfraDockerfile(project, config, outputDir) {
         dockerfileLines.push(`RUN `);
         const commands = customInstall.root_commands.join(' && \\\n    ');
         dockerfileLines.push(`${commands}\n`);
-        dockerfileLines.push(`\nUSER project\n`);
+        dockerfileLines.push(`\nUSER agent\n`);
     }
     
     if (customInstall && customInstall.commands && customInstall.commands.length > 0) {
@@ -109,7 +114,7 @@ function generateInfraDockerfile(project, config, outputDir) {
         const npmPackages = packages.npm.join(' ');
         dockerfileLines.push(`\nUSER root\n`);
         dockerfileLines.push(`RUN npm install -g ${npmPackages}\n`);
-        dockerfileLines.push(`USER project\n`);
+        dockerfileLines.push(`USER agent\n`);
     }
     
     if (packages.cargo && packages.cargo.length > 0) {
@@ -215,7 +220,7 @@ function generateCombinedDockerfile(projectNames, outputDir) {
     if (Object.keys(allEnvVars).length > 0) {
         dockerfileLines.push('\n');
         const envVars = Object.entries(allEnvVars)
-            .map(([key, value]) => `    ${key}=${value}`)
+            .map(([key, value]) => `    ${key}=${formatEnvValue(value)}`)
             .join(' \\\n');
         dockerfileLines.push(`ENV ${envVars}\n`);
     }
@@ -227,7 +232,7 @@ function generateCombinedDockerfile(projectNames, outputDir) {
         dockerfileLines.push(`    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \\\n`);
         dockerfileLines.push(`      ${aptPackages} && \\\n`);
         dockerfileLines.push(`    rm -rf /var/lib/apt/lists/*\n`);
-        dockerfileLines.push(`\nUSER project\n`);
+        dockerfileLines.push(`\nUSER agent\n`);
     }
     
     if (allRootCommands.length > 0) {
@@ -235,7 +240,7 @@ function generateCombinedDockerfile(projectNames, outputDir) {
         dockerfileLines.push(`RUN `);
         const commands = allRootCommands.join(' && \\\n    ');
         dockerfileLines.push(`${commands}\n`);
-        dockerfileLines.push(`\nUSER project\n`);
+        dockerfileLines.push(`\nUSER agent\n`);
     }
     
     if (allCommands.length > 0) {
@@ -248,7 +253,7 @@ function generateCombinedDockerfile(projectNames, outputDir) {
         const npmPackages = uniqueNpmPackages.join(' ');
         dockerfileLines.push(`\nUSER root\n`);
         dockerfileLines.push(`RUN npm install -g ${npmPackages}\n`);
-        dockerfileLines.push(`USER project\n`);
+        dockerfileLines.push(`USER agent\n`);
     }
     
     if (uniqueCargoPackages.length > 0) {
@@ -384,4 +389,3 @@ function main() {
 if (require.main === module) {
     main();
 }
-

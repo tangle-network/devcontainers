@@ -14,12 +14,13 @@ RUN mkdir -p /home/agent/.aa-dev/scripts /home/agent/.aa-dev/contracts && \
     chmod +x /home/agent/.aa-dev/*.sh /home/agent/.aa-dev/scripts/*.sh && \
     chown -R agent:agent /home/agent/.aa-dev
 
+USER agent
+
 USER root
 RUN npm install -g permissionless @coinbase/wallet-sdk @coinbase/onchainkit viem wagmi ethers @pimlico/alto userop @account-abstraction/sdk @account-abstraction/contracts localtunnel
-
-# Pre-warm npm cache with project-specific packages (run as root to avoid permission issues)
-RUN npm cache add permissionless@latest @coinbase/wallet-sdk@latest @coinbase/onchainkit@latest @pimlico/alto@latest userop@latest @account-abstraction/sdk@latest || true
-
 USER agent
+
+# Pre-warm npm cache with project-specific packages
+RUN npm cache add permissionless@latest @coinbase/wallet-sdk@latest @coinbase/onchainkit@latest @pimlico/alto@latest userop@latest @account-abstraction/sdk@latest || true
 
 LABEL description="base-aa infrastructure layer"
