@@ -5,6 +5,6 @@ RUN npm install -g axios graphql-request viem ethers @evmexplorer/blockscout @bl
 USER project
 
 # Pre-warm npm cache with project-specific packages
-RUN npm cache add @evmexplorer/blockscout@latest @blockscout/app-sdk@latest @blockscout/ui-toolkit@latest blockscout-typescript@latest blockscout-cli@latest graphql-request@latest
+RUN npm cache add @evmexplorer/blockscout@latest @blockscout/app-sdk@latest @blockscout/ui-toolkit@latest blockscout-typescript@latest blockscout-cli@latest graphql-request@latest || true
 
 LABEL description="blockscout infrastructure layer"
