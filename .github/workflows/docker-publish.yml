@@ -196,6 +196,7 @@ jobs:
       matrix:
         image:
           - ai-sdk
+          - blockscout
           - clickhouse
           - convex
           - elasticsearch
@@ -411,6 +412,7 @@ jobs:
           - tempo
           - worldcoin
           - x402-payments
+          - xlayer
     steps:
       - name: Checkout
         uses: actions/checkout@v4
