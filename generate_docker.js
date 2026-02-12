@@ -26,7 +26,7 @@ function generateCacheWarmCommands(cacheWarm) {
     // NPM cache warming
     if (cacheWarm.npm && cacheWarm.npm.length > 0) {
         commands.push(`# Pre-warm npm cache with project-specific packages`);
-        commands.push(`RUN npm cache add ${cacheWarm.npm.join(' ')}`);
+        commands.push(`RUN npm cache add ${cacheWarm.npm.join(' ')} || true`);
     }
 
     // Cargo cache warming (fetch crates without building)
