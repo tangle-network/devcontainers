@@ -62,6 +62,59 @@ function formatEnvValue(value) {
     return /\s/.test(stringValue) ? JSON.stringify(stringValue) : stringValue;
 }
 
+function buildCargoInstallCommand(pkg) {
+    if (typeof pkg === 'string') {
+        if (pkg.includes('@')) {
+            const [name, version] = pkg.split('@');
+            return `cargo install ${name} --version ${version}`;
+        }
+        return `cargo install ${pkg}`;
+    }
+
+    if (!pkg || typeof pkg !== 'object') {
+        throw new Error(`Invalid cargo package spec: ${pkg}`);
+    }
+
+    const crate = pkg.name || pkg.package || pkg.crate;
+    if (!crate) {
+        throw new Error(`Cargo package object must include one of: name, package, crate`);
+    }
+
+    const commandParts = ['cargo install'];
+
+    if (pkg.git) commandParts.push(`--git ${pkg.git}`);
+    if (pkg.branch) commandParts.push(`--branch ${pkg.branch}`);
+    if (pkg.tag) commandParts.push(`--tag ${pkg.tag}`);
+    if (pkg.rev) commandParts.push(`--rev ${pkg.rev}`);
+    if (pkg.version && !pkg.git) commandParts.push(`--version ${pkg.version}`);
+    if (pkg.locked) commandParts.push(`--locked`);
+    if (pkg.force) commandParts.push(`--force`);
+    if (Array.isArray(pkg.features) && pkg.features.length > 0) {
+        commandParts.push(`--features ${pkg.features.join(',')}`);
+    }
+
+    commandParts.push(crate);
+    return commandParts.join(' ');
+}
+
+function dedupeCargoSpecs(cargoSpecs) {
+    const seen = new Set();
+    const uniqueSpecs = [];
+
+    for (const pkg of cargoSpecs) {
+        const key = typeof pkg === 'string'
+            ? `str:${pkg}`
+            : `obj:${JSON.stringify(pkg, Object.keys(pkg).sort())}`;
+
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueSpecs.push(pkg);
+        }
+    }
+
+    return uniqueSpecs;
+}
+
 function generateIntermediateDockerfile(base, outputDir) {
     if (!(base in INTERMEDIATE_TEMPLATES)) {
         throw new Error(`Unknown base: ${base}`);
@@ -121,9 +174,7 @@ function generateInfraDockerfile(project, config, outputDir) {
     
     if (packages.cargo && packages.cargo.length > 0) {
         for (const pkg of packages.cargo) {
-            const cargoCmd = pkg.includes('@')
-                ? `cargo install ${pkg.split('@')[0]} --version ${pkg.split('@')[1]}`
-                : `cargo install ${pkg}`;
+            const cargoCmd = buildCargoInstallCommand(pkg);
             dockerfileLines.push(`\nRUN ${cargoCmd}\n`);
         }
     }
@@ -216,7 +267,7 @@ function generateCombinedDockerfile(projectNames, outputDir) {
     }
     
     const uniqueNpmPackages = [...new Set(allNpmPackages)];
-    const uniqueCargoPackages = [...new Set(allCargoPackages)];
+    const uniqueCargoPackages = dedupeCargoSpecs(allCargoPackages);
     const uniqueAptPackages = [...new Set(allAptPackages)];
     
     if (Object.keys(allEnvVars).length > 0) {
@@ -260,9 +311,7 @@ function generateCombinedDockerfile(projectNames, outputDir) {
     
     if (uniqueCargoPackages.length > 0) {
         for (const pkg of uniqueCargoPackages) {
-            const cargoCmd = pkg.includes('@')
-                ? `cargo install ${pkg.split('@')[0]} --version ${pkg.split('@')[1]}`
-                : `cargo install ${pkg}`;
+            const cargoCmd = buildCargoInstallCommand(pkg);
             dockerfileLines.push(`\nRUN ${cargoCmd}\n`);
         }
     }

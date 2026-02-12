@@ -204,7 +204,12 @@
             "base": "rust",
             "packages": {
                 "cargo": [
-                    "subxt-cli@0.39.0"
+                    "subxt-cli@0.39.0",
+                    {
+                        "name": "cargo-tangle",
+                        "git": "https://github.com/tangle-network/blueprint-sdk",
+                        "branch": "v2"
+                    }
                 ],
                 "npm": [
                     "@tangle-network/tangle-substrate-types"
