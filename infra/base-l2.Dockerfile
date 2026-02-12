@@ -14,12 +14,13 @@ RUN mkdir -p /home/agent/.base-dev/scripts && \
     chmod +x /home/agent/.base-dev/*.sh /home/agent/.base-dev/scripts/*.sh && \
     chown -R agent:agent /home/agent/.base-dev
 
+USER agent
+
 USER root
 RUN npm install -g @coinbase/onchainkit @coinbase/wallet-sdk @coinbase/cdp-sdk @coinbase/agentkit frames.js @farcaster/hub-nodejs permissionless viem wagmi ethers localtunnel
-
-# Pre-warm npm cache with project-specific packages (run as root to avoid permission issues)
-RUN npm cache add @coinbase/onchainkit@latest @coinbase/wallet-sdk@latest @coinbase/cdp-sdk@latest @coinbase/agentkit@latest frames.js@latest permissionless@latest @x402/fetch@latest @x402/axios@latest @x402/express@latest @rainbow-me/rainbowkit@latest || true
-
 USER agent
+
+# Pre-warm npm cache with project-specific packages
+RUN npm cache add @coinbase/onchainkit@latest @coinbase/wallet-sdk@latest @coinbase/cdp-sdk@latest @coinbase/agentkit@latest frames.js@latest permissionless@latest @x402/fetch@latest @x402/axios@latest @x402/express@latest @rainbow-me/rainbowkit@latest || true
 
 LABEL description="base-l2 infrastructure layer"

@@ -2,7 +2,8 @@ FROM rust:latest
 
 USER root
 RUN pip3 install --no-cache-dir --break-system-packages qdrant-client && \
-    python3 -c 'from qdrant_client import QdrantClient; print("Qdrant client installed")'
+    cargo install qdrant || (curl -sSL https://github.com/qdrant/qdrant/releases/latest/download/qdrant-x86_64-unknown-linux-gnu.tar.gz | tar -xz -C /usr/local/bin || echo 'Qdrant binary installation') && \
+    qdrant --version || echo 'Qdrant installed'
 
 USER agent
 

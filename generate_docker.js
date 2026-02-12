@@ -42,17 +42,77 @@ function generateCacheWarmCommands(cacheWarm) {
         commands.push(`    printf '[package]\\nname = "warm"\\nversion = "0.0.0"\\nedition = "2021"\\n\\n[dependencies]\\n${deps}\\n' > /tmp/cargo-warm/Cargo.toml && \\`);
         commands.push(`    mkdir -p /tmp/cargo-warm/src && echo 'fn main() {}' > /tmp/cargo-warm/src/main.rs && \\`);
         commands.push(`    cd /tmp/cargo-warm && cargo fetch && \\`);
-        commands.push(`    rm -rf /tmp/cargo-warm && \\`);
-        commands.push(`    chmod -R a+w $CARGO_HOME`);
+        commands.push(`    rm -rf /tmp/cargo-warm`);
+        commands.push(`\nUSER root`);
+        commands.push(`RUN chmod -R a+w $CARGO_HOME`);
+        commands.push(`USER agent`);
     }
 
     // pip cache warming
     if (cacheWarm.pip && cacheWarm.pip.length > 0) {
         commands.push(`# Pre-warm pip cache with project-specific packages`);
-        commands.push(`RUN pip download --break-system-packages --dest /tmp/pip-warm ${cacheWarm.pip.join(' ')} && rm -rf /tmp/pip-warm`);
+        commands.push(`RUN pip download --dest /tmp/pip-warm ${cacheWarm.pip.join(' ')} && rm -rf /tmp/pip-warm`);
     }
 
     return commands.length > 0 ? '\n' + commands.join('\n') + '\n' : '';
+}
+
+function formatEnvValue(value) {
+    const stringValue = String(value);
+    return /\s/.test(stringValue) ? JSON.stringify(stringValue) : stringValue;
+}
+
+function buildCargoInstallCommand(pkg) {
+    if (typeof pkg === 'string') {
+        if (pkg.includes('@')) {
+            const [name, version] = pkg.split('@');
+            return `cargo install ${name} --version ${version}`;
+        }
+        return `cargo install ${pkg}`;
+    }
+
+    if (!pkg || typeof pkg !== 'object') {
+        throw new Error(`Invalid cargo package spec: ${pkg}`);
+    }
+
+    const crate = pkg.name || pkg.package || pkg.crate;
+    if (!crate) {
+        throw new Error(`Cargo package object must include one of: name, package, crate`);
+    }
+
+    const commandParts = ['cargo install'];
+
+    if (pkg.git) commandParts.push(`--git ${pkg.git}`);
+    if (pkg.branch) commandParts.push(`--branch ${pkg.branch}`);
+    if (pkg.tag) commandParts.push(`--tag ${pkg.tag}`);
+    if (pkg.rev) commandParts.push(`--rev ${pkg.rev}`);
+    if (pkg.version && !pkg.git) commandParts.push(`--version ${pkg.version}`);
+    if (pkg.locked) commandParts.push(`--locked`);
+    if (pkg.force) commandParts.push(`--force`);
+    if (Array.isArray(pkg.features) && pkg.features.length > 0) {
+        commandParts.push(`--features ${pkg.features.join(',')}`);
+    }
+
+    commandParts.push(crate);
+    return commandParts.join(' ');
+}
+
+function dedupeCargoSpecs(cargoSpecs) {
+    const seen = new Set();
+    const uniqueSpecs = [];
+
+    for (const pkg of cargoSpecs) {
+        const key = typeof pkg === 'string'
+            ? `str:${pkg}`
+            : `obj:${JSON.stringify(pkg, Object.keys(pkg).sort())}`;
+
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueSpecs.push(pkg);
+        }
+    }
+
+    return uniqueSpecs;
 }
 
 function generateIntermediateDockerfile(base, outputDir) {
@@ -76,7 +136,7 @@ function generateInfraDockerfile(project, config, outputDir) {
     if (customInstall && customInstall.env) {
         dockerfileLines.push('\n');
         const envVars = Object.entries(customInstall.env)
-            .map(([key, value]) => `    ${key}=${value}`)
+            .map(([key, value]) => `    ${key}=${formatEnvValue(value)}`)
             .join(' \\\n');
         dockerfileLines.push(`ENV ${envVars}\n`);
     }
@@ -88,7 +148,7 @@ function generateInfraDockerfile(project, config, outputDir) {
         dockerfileLines.push(`    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \\\n`);
         dockerfileLines.push(`      ${aptPackages} && \\\n`);
         dockerfileLines.push(`    rm -rf /var/lib/apt/lists/*\n`);
-        dockerfileLines.push(`\nUSER project\n`);
+        dockerfileLines.push(`\nUSER agent\n`);
     }
     
     if (customInstall && customInstall.root_commands && customInstall.root_commands.length > 0) {
@@ -96,7 +156,7 @@ function generateInfraDockerfile(project, config, outputDir) {
         dockerfileLines.push(`RUN `);
         const commands = customInstall.root_commands.join(' && \\\n    ');
         dockerfileLines.push(`${commands}\n`);
-        dockerfileLines.push(`\nUSER project\n`);
+        dockerfileLines.push(`\nUSER agent\n`);
     }
     
     if (customInstall && customInstall.commands && customInstall.commands.length > 0) {
@@ -109,14 +169,12 @@ function generateInfraDockerfile(project, config, outputDir) {
         const npmPackages = packages.npm.join(' ');
         dockerfileLines.push(`\nUSER root\n`);
         dockerfileLines.push(`RUN npm install -g ${npmPackages}\n`);
-        dockerfileLines.push(`USER project\n`);
+        dockerfileLines.push(`USER agent\n`);
     }
     
     if (packages.cargo && packages.cargo.length > 0) {
         for (const pkg of packages.cargo) {
-            const cargoCmd = pkg.includes('@')
-                ? `cargo install ${pkg.split('@')[0]} --version ${pkg.split('@')[1]}`
-                : `cargo install ${pkg}`;
+            const cargoCmd = buildCargoInstallCommand(pkg);
             dockerfileLines.push(`\nRUN ${cargoCmd}\n`);
         }
     }
@@ -209,13 +267,13 @@ function generateCombinedDockerfile(projectNames, outputDir) {
     }
     
     const uniqueNpmPackages = [...new Set(allNpmPackages)];
-    const uniqueCargoPackages = [...new Set(allCargoPackages)];
+    const uniqueCargoPackages = dedupeCargoSpecs(allCargoPackages);
     const uniqueAptPackages = [...new Set(allAptPackages)];
     
     if (Object.keys(allEnvVars).length > 0) {
         dockerfileLines.push('\n');
         const envVars = Object.entries(allEnvVars)
-            .map(([key, value]) => `    ${key}=${value}`)
+            .map(([key, value]) => `    ${key}=${formatEnvValue(value)}`)
             .join(' \\\n');
         dockerfileLines.push(`ENV ${envVars}\n`);
     }
@@ -227,7 +285,7 @@ function generateCombinedDockerfile(projectNames, outputDir) {
         dockerfileLines.push(`    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \\\n`);
         dockerfileLines.push(`      ${aptPackages} && \\\n`);
         dockerfileLines.push(`    rm -rf /var/lib/apt/lists/*\n`);
-        dockerfileLines.push(`\nUSER project\n`);
+        dockerfileLines.push(`\nUSER agent\n`);
     }
     
     if (allRootCommands.length > 0) {
@@ -235,7 +293,7 @@ function generateCombinedDockerfile(projectNames, outputDir) {
         dockerfileLines.push(`RUN `);
         const commands = allRootCommands.join(' && \\\n    ');
         dockerfileLines.push(`${commands}\n`);
-        dockerfileLines.push(`\nUSER project\n`);
+        dockerfileLines.push(`\nUSER agent\n`);
     }
     
     if (allCommands.length > 0) {
@@ -248,14 +306,12 @@ function generateCombinedDockerfile(projectNames, outputDir) {
         const npmPackages = uniqueNpmPackages.join(' ');
         dockerfileLines.push(`\nUSER root\n`);
         dockerfileLines.push(`RUN npm install -g ${npmPackages}\n`);
-        dockerfileLines.push(`USER project\n`);
+        dockerfileLines.push(`USER agent\n`);
     }
     
     if (uniqueCargoPackages.length > 0) {
         for (const pkg of uniqueCargoPackages) {
-            const cargoCmd = pkg.includes('@')
-                ? `cargo install ${pkg.split('@')[0]} --version ${pkg.split('@')[1]}`
-                : `cargo install ${pkg}`;
+            const cargoCmd = buildCargoInstallCommand(pkg);
             dockerfileLines.push(`\nRUN ${cargoCmd}\n`);
         }
     }
@@ -384,4 +440,3 @@ function main() {
 if (require.main === module) {
     main();
 }
-

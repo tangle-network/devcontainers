@@ -9,4 +9,17 @@ RUN curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.
 
 USER agent
 
+# Pre-warm npm cache with project-specific packages
+RUN npm cache add @solana/web3.js@latest @coral-xyz/anchor@latest @solana/spl-token@latest @metaplex-foundation/js@latest @solana/wallet-adapter-base@latest @solana/wallet-adapter-react@latest || true
+# Pre-warm cargo cache with project-specific crates
+RUN mkdir -p /tmp/cargo-warm && \
+    printf '[package]\nname = "warm"\nversion = "0.0.0"\nedition = "2021"\n\n[dependencies]\nsolana-program = "1"\nanchor-lang = "0.30"\nspl-token = "4"\n' > /tmp/cargo-warm/Cargo.toml && \
+    mkdir -p /tmp/cargo-warm/src && echo 'fn main() {}' > /tmp/cargo-warm/src/main.rs && \
+    cd /tmp/cargo-warm && cargo fetch && \
+    rm -rf /tmp/cargo-warm
+
+USER root
+RUN chmod -R a+w $CARGO_HOME
+USER agent
+
 LABEL description="solana infrastructure layer"

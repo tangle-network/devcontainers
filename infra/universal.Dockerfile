@@ -31,4 +31,7 @@ USER root
 RUN npm install -g typescript ts-node @types/node eslint prettier nodemon dotenv
 USER agent
 
+# Pre-warm npm cache with project-specific packages
+RUN npm cache add react@latest react-dom@latest next@latest vite@latest express@latest fastify@latest hono@latest zod@latest drizzle-orm@latest prisma@latest tailwindcss@latest || true
+
 LABEL description="universal infrastructure layer"

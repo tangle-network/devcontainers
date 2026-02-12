@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y redis-server && rm -rf /var/lib/apt/lis
 USER agent
 
 USER root
-RUN npm install -g redis ioredis
+RUN npm install -g redis ioredis @redis/client
 USER agent
 
 LABEL description="redis infrastructure layer"

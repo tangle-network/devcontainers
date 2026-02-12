@@ -123,7 +123,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           build-contexts: |
-            base-system:latest=docker-image://${{ env.IMAGE_PREFIX }}/base-system:latest
+            base-system:latest=docker-image://${{ env.IMAGE_PREFIX }}/base-system:${{ github.sha }}
 
       - name: Make package public
         run: |
@@ -170,7 +170,7 @@ jobs:
           cache-from: type=gha,scope=foundry-intermediate
           cache-to: type=gha,mode=max,scope=foundry-intermediate
           build-contexts: |
-            rust:latest=docker-image://${{ env.IMAGE_PREFIX }}/rust:latest
+            rust:latest=docker-image://${{ env.IMAGE_PREFIX }}/rust:${{ github.sha }}
 
       - name: Make package public
         run: |
@@ -246,7 +246,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           build-contexts: |
-            base-system:latest=docker-image://${{ env.IMAGE_PREFIX }}/base-system:latest
+            base-system:latest=docker-image://${{ env.IMAGE_PREFIX }}/base-system:${{ github.sha }}
 
       - name: Make package public
         run: |
@@ -311,7 +311,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           build-contexts: |
-            rust:latest=docker-image://${{ env.IMAGE_PREFIX }}/rust:latest
+            rust:latest=docker-image://${{ env.IMAGE_PREFIX }}/rust:${{ github.sha }}
 
       - name: Make package public
         run: |
@@ -363,7 +363,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           build-contexts: |
-            go:latest=docker-image://${{ env.IMAGE_PREFIX }}/go:latest
+            go:latest=docker-image://${{ env.IMAGE_PREFIX }}/go:${{ github.sha }}
 
       - name: Make package public
         run: |
@@ -443,7 +443,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           build-contexts: |
-            foundry:latest=docker-image://${{ env.IMAGE_PREFIX }}/foundry:latest
+            foundry:latest=docker-image://${{ env.IMAGE_PREFIX }}/foundry:${{ github.sha }}
 
       - name: Make package public
         run: |
@@ -504,7 +504,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           build-contexts: |
-            scientific-python:latest=docker-image://${{ env.IMAGE_PREFIX }}/scientific-python:latest
+            scientific-python:latest=docker-image://${{ env.IMAGE_PREFIX }}/scientific-python:${{ github.sha }}
 
       - name: Make package public
         run: |
