@@ -6,6 +6,258 @@
         "go": "FROM base-system:latest\n\nENV GOROOT=/usr/local/go \\\n    GOPATH=/go \\\n    PATH=/usr/local/go/bin:/go/bin:$PATH\n\nUSER root\nRUN ARCH=$(dpkg --print-architecture) && \\\n    if [ \"$ARCH\" = \"amd64\" ]; then GO_ARCH=\"amd64\"; \\\n    elif [ \"$ARCH\" = \"arm64\" ]; then GO_ARCH=\"arm64\"; \\\n    else echo \"Unsupported architecture: $ARCH\"; exit 1; fi && \\\n    curl -fsSL https://go.dev/dl/go1.22.0.linux-${GO_ARCH}.tar.gz | tar -C /usr/local -xzf - && \\\n    mkdir -p /go/bin /go/pkg /go/src && \\\n    chmod -R a+w /go\n\n# Install gopls LSP for Go code intelligence\nRUN go install golang.org/x/tools/gopls@latest && \\\n    ln -sf /go/bin/gopls /usr/local/bin/gopls\n\nUSER agent\n\nLABEL description=\"Go intermediate layer\"\n"
     },
     "projects": {
+        "ai-agent-web3": {
+            "base": "scientific-python",
+            "packages": {
+                "npm": [
+                    "@coinbase/agentkit",
+                    "@coinbase/cdp-sdk",
+                    "@x402/fetch",
+                    "@xmtp/xmtp-js",
+                    "viem",
+                    "wagmi",
+                    "langchain",
+                    "@langchain/core",
+                    "@langchain/openai",
+                    "@langchain/anthropic"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "@coinbase/agentkit@latest",
+                    "@coinbase/cdp-sdk@latest",
+                    "@x402/fetch@latest",
+                    "@xmtp/xmtp-js@latest",
+                    "permissionless@latest"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages langchain langchain-core langchain-openai langchain-anthropic",
+                    "pip3 install --no-cache-dir --break-system-packages langgraph langsmith",
+                    "pip3 install --no-cache-dir --break-system-packages web3 eth-account",
+                    "pip3 install --no-cache-dir --break-system-packages chromadb sentence-transformers",
+                    "python3 -c 'import langchain; import web3; print(f\"LangChain {langchain.__version__}, Web3.py installed\")'"
+                ]
+            }
+        },
+        "aptos": {
+            "base": "rust",
+            "packages": {
+                "cargo": []
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.local/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "apt_packages": [
+                    "python3-pip"
+                ],
+                "root_commands": [
+                    "cargo install --git https://github.com/aptos-labs/aptos-core.git aptos --locked",
+                    "aptos --version || echo 'Aptos CLI installed'"
+                ]
+            }
+        },
+        "arbitrum": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "@arbitrum/sdk",
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
+            }
+        },
+        "base-aa": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "permissionless",
+                    "@coinbase/wallet-sdk",
+                    "@coinbase/onchainkit",
+                    "viem",
+                    "wagmi",
+                    "ethers",
+                    "@pimlico/alto",
+                    "userop",
+                    "@account-abstraction/sdk",
+                    "@account-abstraction/contracts",
+                    "localtunnel"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "permissionless@latest",
+                    "@coinbase/wallet-sdk@latest",
+                    "@coinbase/onchainkit@latest",
+                    "@pimlico/alto@latest",
+                    "userop@latest",
+                    "@account-abstraction/sdk@latest"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "ENTRYPOINT_V06": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+                    "ENTRYPOINT_V07": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+                    "BASE_SEPOLIA_RPC": "https://sepolia.base.org",
+                    "TEST_MNEMONIC": "test test test test test test test test test test test junk",
+                    "BUNDLER_RPC": "http://localhost:4337"
+                },
+                "root_commands": [
+                    "mkdir -p /home/agent/.aa-dev/scripts /home/agent/.aa-dev/contracts",
+                    "echo '#!/bin/bash\\n# Start the full AA development stack (anvil + bundler)\\necho \"=== Account Abstraction Development Stack ===\"\\necho \"\"\\necho \"Starting Base Sepolia fork with pre-funded accounts...\"\\nanvil --fork-url https://sepolia.base.org --chain-id 84532 --balance 10000 --accounts 10 --mnemonic \"test test test test test test test test test test test junk\" --port 8545 &\\nANVIL_PID=$!\\nsleep 3\\necho \"Anvil running on http://localhost:8545\"\\necho \"\"\\necho \"Starting Alto bundler on port 4337...\"\\nnpx @pimlico/alto --rpc-url http://127.0.0.1:8545 --entry-points 0x0000000071727De22E5E9d8BAf0edAc6f37da032 --port 4337 &\\nBUNDLER_PID=$!\\nsleep 2\\necho \"Bundler running on http://localhost:4337\"\\necho \"\"\\necho \"=== Test Accounts ===\"\\necho \"Account 0 (Bundler Signer): 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\"\\necho \"Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80\"\\necho \"\"\\necho \"=== Contract Addresses ===\"\\necho \"EntryPoint v0.7: 0x0000000071727De22E5E9d8BAf0edAc6f37da032\"\\necho \"EntryPoint v0.6: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789\"\\necho \"\"\\necho \"Press Ctrl+C to stop all services...\"\\nfunction cleanup { kill $ANVIL_PID $BUNDLER_PID 2>/dev/null; exit 0; }\\ntrap cleanup SIGINT SIGTERM\\nwait' > /home/agent/.aa-dev/start-aa-stack.sh",
+                    "echo '#!/bin/bash\\n# Deploy a simple verifying paymaster for testing\\necho \"Deploying test verifying paymaster...\"\\n# This is a placeholder - in production you would deploy actual paymaster contracts\\necho \"For production paymasters, see: https://docs.pimlico.io/paymaster\"\\necho \"\"\\necho \"Available paymaster options:\"\\necho \"1. Pimlico Paymaster (hosted): https://api.pimlico.io/v2/base-sepolia/rpc?apikey=YOUR_KEY\"\\necho \"2. Coinbase Smart Wallet (gasless for eligible txs)\"\\necho \"3. Deploy your own VerifyingPaymaster contract\"' > /home/agent/.aa-dev/scripts/deploy-paymaster.sh",
+                    "echo '#!/bin/bash\\n# Show AA stack info\\necho \"=== Account Abstraction Stack Info ===\"\\necho \"\"\\necho \"EntryPoint v0.7: 0x0000000071727De22E5E9d8BAf0edAc6f37da032\"\\necho \"EntryPoint v0.6: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789\"\\necho \"\"\\necho \"Bundler Endpoints:\"\\necho \"  Local Alto: http://localhost:4337\"\\necho \"  Pimlico: https://api.pimlico.io/v2/base-sepolia/rpc?apikey=YOUR_KEY\"\\necho \"  Alchemy: https://base-sepolia.g.alchemy.com/v2/YOUR_KEY\"\\necho \"\"\\necho \"Smart Account Factories (Base Sepolia):\"\\necho \"  Coinbase Smart Wallet: 0x0BA5ED0c6AA8c49038F819E587E2633c4A9F428a\"\\necho \"  Safe Proxy Factory: 0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2\"\\necho \"  Kernel v3 Factory: 0x6723b44Abeec4E71eBE3232BD5B455805baDD22f\"' > /home/agent/.aa-dev/scripts/show-info.sh",
+                    "chmod +x /home/agent/.aa-dev/*.sh /home/agent/.aa-dev/scripts/*.sh",
+                    "chown -R agent:agent /home/agent/.aa-dev"
+                ]
+            }
+        },
+        "base-l2": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "@coinbase/onchainkit",
+                    "@coinbase/wallet-sdk",
+                    "@coinbase/cdp-sdk",
+                    "@coinbase/agentkit",
+                    "frames.js",
+                    "@farcaster/hub-nodejs",
+                    "permissionless",
+                    "viem",
+                    "wagmi",
+                    "ethers",
+                    "localtunnel"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "@coinbase/onchainkit@latest",
+                    "@coinbase/wallet-sdk@latest",
+                    "@coinbase/cdp-sdk@latest",
+                    "@coinbase/agentkit@latest",
+                    "frames.js@latest",
+                    "permissionless@latest",
+                    "@x402/fetch@latest",
+                    "@x402/axios@latest",
+                    "@x402/express@latest",
+                    "@rainbow-me/rainbowkit@latest"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "BASE_MAINNET_RPC": "https://mainnet.base.org",
+                    "BASE_SEPOLIA_RPC": "https://sepolia.base.org",
+                    "ENTRYPOINT_ADDRESS": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+                    "TEST_MNEMONIC": "test test test test test test test test test test test junk",
+                    "USDC_BASE_SEPOLIA": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                },
+                "root_commands": [
+                    "mkdir -p /home/agent/.base-dev/scripts",
+                    "echo '#!/bin/bash\\n# Start anvil with pre-funded accounts (10000 ETH each)\\n# Mnemonic: test test test test test test test test test test test junk\\n# Account 0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\\n# Account 1: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8\\necho \"Starting Base Sepolia fork with pre-funded accounts...\"\\nanvil --fork-url https://sepolia.base.org --chain-id 84532 --balance 10000 --accounts 10 --mnemonic \"test test test test test test test test test test test junk\" \"$@\"' > /home/agent/.base-dev/start-base-fork.sh",
+                    "echo '#!/bin/bash\\n# Mint test USDC to an address on local anvil\\nADDRESS=${1:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}\\nAMOUNT=${2:-1000000000000}  # 1M USDC (6 decimals)\\nRPC=${3:-http://127.0.0.1:8545}\\nUSDC=0x036CbD53842c5426634e7929541eC2318f3dCF7e\\necho \"Minting $AMOUNT USDC to $ADDRESS...\"\\n# Use foundry deal to set USDC balance (works on anvil forks)\\ncast rpc anvil_setBalance $ADDRESS 0x21e19e0c9bab2400000 --rpc-url $RPC 2>/dev/null\\n# For ERC20, we use storage slot manipulation. USDC uses slot 9 for balances.\\nSLOT=$(cast keccak $(cast abi-encode \"f(address,uint256)\" $ADDRESS 9))\\ncast rpc anvil_setStorageAt $USDC $SLOT $(cast to-uint256 $AMOUNT) --rpc-url $RPC\\necho \"Done. Check balance: cast call $USDC balanceOf(address)(uint256) $ADDRESS --rpc-url $RPC\"' > /home/agent/.base-dev/scripts/mint-usdc.sh",
+                    "echo '#!/bin/bash\\n# Show test account info\\necho \"=== Pre-funded Test Accounts ===\"\\necho \"Mnemonic: test test test test test test test test test test test junk\"\\necho \"\"\\necho \"Account 0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\"\\necho \"Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80\"\\necho \"\"\\necho \"Account 1: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8\"\\necho \"Private Key: 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d\"\\necho \"\"\\necho \"Account 2: 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC\"\\necho \"Private Key: 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a\"\\necho \"\"\\necho \"All accounts have 10000 ETH on local anvil fork.\"' > /home/agent/.base-dev/scripts/show-accounts.sh",
+                    "chmod +x /home/agent/.base-dev/*.sh /home/agent/.base-dev/scripts/*.sh",
+                    "chown -R agent:agent /home/agent/.base-dev"
+                ]
+            }
+        },
+        "blockscout": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "axios",
+                    "graphql-request",
+                    "viem",
+                    "ethers",
+                    "@evmexplorer/blockscout",
+                    "@blockscout/app-sdk",
+                    "@blockscout/ui-toolkit",
+                    "blockscout-typescript",
+                    "blockscout-cli",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "@evmexplorer/blockscout@latest",
+                    "@blockscout/app-sdk@latest",
+                    "@blockscout/ui-toolkit@latest",
+                    "blockscout-typescript@latest",
+                    "blockscout-cli@latest",
+                    "graphql-request@latest"
+                ]
+            }
+        },
+        "brevis": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "ethers",
+                    "viem",
+                    "hardhat"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
+                    "echo 'Brevis ZK coprocessor development environment ready'"
+                ]
+            }
+        },
+        "chainlink": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "@chainlink/contracts",
+                    "@chainlink/functions-toolkit",
+                    "@chainlink/local",
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
+            }
+        },
+        "chromadb": {
+            "base": "scientific-python",
+            "packages": {
+                "npm": [
+                    "chromadb",
+                    "chromadb-default-embed"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages chromadb sentence-transformers",
+                    "python3 -c 'import chromadb; print(f\"ChromaDB {chromadb.__version__}\")'"
+                ]
+            }
+        },
+        "clickhouse": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "@clickhouse/client"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "curl -fsSL https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key | gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg",
+                    "echo 'deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main' | tee /etc/apt/sources.list.d/clickhouse.list",
+                    "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y clickhouse-server clickhouse-client && rm -rf /var/lib/apt/lists/*",
+                    "pip3 install --no-cache-dir --break-system-packages clickhouse-connect clickhouse-driver",
+                    "clickhouse-client --version"
+                ]
+            }
+        },
         "coinbase": {
             "base": "foundry",
             "packages": {
@@ -33,41 +285,40 @@
                 ]
             }
         },
-        "injective": {
+        "convex": {
             "base": "base-system",
             "packages": {
                 "npm": [
-                    "@injectivelabs/sdk-ts",
-                    "@injectivelabs/networks"
+                    "convex",
+                    "convex-dev"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "convex@latest",
+                    "convex-helpers@latest",
+                    "@convex-dev/auth@latest"
                 ]
             }
         },
-        "succinct": {
-            "base": "rust",
+        "elasticsearch": {
+            "base": "base-system",
             "packages": {
-                "cargo": []
-            },
-            "custom_install": {
-                "env": {
-                    "PATH": "/root/.sp1/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
-                },
-                "root_commands": [
-                    "curl -L https://sp1.succinct.xyz | bash",
-                    "if [ -f /root/.sp1/bin/sp1up ]; then /root/.sp1/bin/sp1up; cargo prove --version; else echo 'SP1 not installed'; fi"
+                "npm": [
+                    "@elastic/elasticsearch",
+                    "elasticsearch"
                 ]
-            }
-        },
-        "risc0": {
-            "base": "rust",
-            "packages": {
-                "cargo": []
             },
             "custom_install": {
-                "env": {
-                    "PATH": "/root/.risc0/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
-                },
+                "apt_packages": [
+                    "default-jdk"
+                ],
                 "root_commands": [
-                    "cargo install cargo-risczero && cargo risczero install || echo 'RISC Zero toolchain installed'"
+                    "curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg",
+                    "echo 'deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main' | tee /etc/apt/sources.list.d/elastic-8.x.list",
+                    "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y elasticsearch && rm -rf /var/lib/apt/lists/*",
+                    "pip3 install --no-cache-dir --break-system-packages elasticsearch",
+                    "echo 'Elasticsearch installed (run with: systemctl start elasticsearch)'"
                 ]
             }
         },
@@ -92,6 +343,433 @@
                 ]
             }
         },
+        "farcaster": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "frames.js",
+                    "@farcaster/hub-nodejs",
+                    "@farcaster/core",
+                    "@coinbase/onchainkit",
+                    "viem",
+                    "wagmi",
+                    "hono",
+                    "next"
+                ]
+            },
+            "cache_warm": {
+                "npm": [
+                    "frames.js@latest",
+                    "@farcaster/hub-nodejs@latest",
+                    "@coinbase/onchainkit@latest",
+                    "frog@latest"
+                ]
+            }
+        },
+        "foundry": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox",
+                    "@nomicfoundation/hardhat-foundry"
+                ]
+            }
+        },
+        "gelato": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "@gelatonetwork/automate-sdk",
+                    "@gelatonetwork/relay-sdk",
+                    "@gelatonetwork/web3-functions-sdk",
+                    "ethers",
+                    "viem",
+                    "hardhat"
+                ]
+            }
+        },
+        "gnosis": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "@safe-global/protocol-kit",
+                    "@safe-global/api-kit",
+                    "@safe-global/safe-core-sdk-types",
+                    "@gnosis.pm/zodiac",
+                    "@gnosis.pm/safe-deployments",
+                    "ethers",
+                    "viem",
+                    "hardhat"
+                ]
+            }
+        },
+        "hardhat": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox",
+                    "@nomicfoundation/hardhat-verify",
+                    "ethers",
+                    "viem"
+                ]
+            }
+        },
+        "huggingface-cpu": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu",
+                    "pip3 install --no-cache-dir --break-system-packages transformers datasets tokenizers accelerate peft diffusers safetensors huggingface_hub",
+                    "pip3 install --no-cache-dir --break-system-packages sentencepiece protobuf",
+                    "python3 -c 'import transformers; print(f\"Transformers {transformers.__version__}\")'"
+                ]
+            }
+        },
+        "hyperlane": {
+            "base": "rust",
+            "packages": {
+                "npm": [
+                    "@hyperlane-xyz/sdk",
+                    "@hyperlane-xyz/core",
+                    "@hyperlane-xyz/utils",
+                    "@hyperlane-xyz/cli",
+                    "ethers",
+                    "viem"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.foundry/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "curl -L https://foundry.paradigm.xyz | bash && /root/.foundry/bin/foundryup && chmod -R a+rx /root/.foundry",
+                    "git clone --depth 1 https://github.com/hyperlane-xyz/hyperlane-monorepo.git /tmp/hyperlane && cd /tmp/hyperlane/rust && cargo build --release --bin validator --bin relayer && cp target/release/validator target/release/relayer /usr/local/bin/ && chmod +x /usr/local/bin/validator /usr/local/bin/relayer && rm -rf /tmp/hyperlane",
+                    "validator --help || echo 'Hyperlane validator installed'",
+                    "relayer --help || echo 'Hyperlane relayer installed'"
+                ]
+            }
+        },
+        "hyperliquid": {
+            "base": "rust",
+            "packages": {
+                "npm": [
+                    "ethers",
+                    "viem"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages hyperliquid-python-sdk",
+                    "mkdir -p /root/bin && curl -sSL https://binaries.hyperliquid.xyz/Testnet/hl-visor -o /root/bin/hl-visor && chmod +x /root/bin/hl-visor",
+                    "git clone https://github.com/hyperliquid-dex/node.git /opt/hyperliquid-node && cd /opt/hyperliquid-node && git checkout 8a2c4b9e5757aafae5079f8236e3bf6752f7d81b && chmod -R a+r /opt/hyperliquid-node",
+                    "/root/bin/hl-visor --help || echo 'Hyperliquid visor installed'"
+                ]
+            }
+        },
+        "injective": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "@injectivelabs/sdk-ts",
+                    "@injectivelabs/networks"
+                ]
+            }
+        },
+        "jupyter": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages jupyterlab-git jupyterlab-lsp python-lsp-server[all]",
+                    "pip3 install --no-cache-dir --break-system-packages nbconvert nbformat papermill",
+                    "pip3 install --no-cache-dir --break-system-packages ipywidgets plotly bokeh altair",
+                    "jupyter lab --version"
+                ]
+            }
+        },
+        "kafka": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "kafkajs",
+                    "@confluentinc/kafka-javascript"
+                ]
+            },
+            "custom_install": {
+                "apt_packages": [
+                    "default-jdk"
+                ],
+                "root_commands": [
+                    "curl -sSL https://downloads.apache.org/kafka/3.7.0/kafka_2.13-3.7.0.tgz | tar -xz -C /opt",
+                    "ln -s /opt/kafka_2.13-3.7.0 /opt/kafka",
+                    "chmod -R a+rx /opt/kafka",
+                    "pip3 install --no-cache-dir --break-system-packages kafka-python confluent-kafka",
+                    "echo 'export PATH=$PATH:/opt/kafka/bin' >> /etc/profile.d/kafka.sh",
+                    "/opt/kafka/bin/kafka-topics.sh --version || echo 'Kafka installed'"
+                ]
+            }
+        },
+        "kubernetes": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "@kubernetes/client-node"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${ARCH}/kubectl\" && install kubectl /usr/local/bin/kubectl && rm kubectl",
+                    "curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash",
+                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -Lo /usr/local/bin/kind \"https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-${ARCH}\" && chmod +x /usr/local/bin/kind",
+                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -Lo /usr/local/bin/k9s.tar.gz \"https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_${ARCH}.tar.gz\" && tar -xzf /usr/local/bin/k9s.tar.gz -C /usr/local/bin k9s && rm /usr/local/bin/k9s.tar.gz",
+                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -Lo /usr/local/bin/kustomize.tar.gz \"https://github.com/kubernetes-sigs/kustomize/releases/latest/download/kustomize_v5.4.1_linux_${ARCH}.tar.gz\" && tar -xzf /usr/local/bin/kustomize.tar.gz -C /usr/local/bin && rm /usr/local/bin/kustomize.tar.gz",
+                    "pip3 install --no-cache-dir --break-system-packages kubernetes",
+                    "kubectl version --client && helm version && kind version && k9s version"
+                ]
+            }
+        },
+        "langchain": {
+            "base": "scientific-python",
+            "packages": {
+                "npm": [
+                    "langchain",
+                    "@langchain/core",
+                    "@langchain/openai",
+                    "@langchain/anthropic",
+                    "@langchain/community"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages langchain langchain-core langchain-community langchain-openai langchain-anthropic",
+                    "pip3 install --no-cache-dir --break-system-packages langgraph langsmith langserve",
+                    "pip3 install --no-cache-dir --break-system-packages chromadb faiss-cpu sentence-transformers",
+                    "python3 -c 'import langchain; print(f\"LangChain {langchain.__version__}\")'"
+                ]
+            },
+            "cache_warm": {
+                "pip": [
+                    "openai",
+                    "anthropic",
+                    "tiktoken",
+                    "chromadb",
+                    "sentence-transformers"
+                ]
+            }
+        },
+        "lifi": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "@lifi/sdk",
+                    "@lifi/types",
+                    "@lifi/wallet-management",
+                    "ethers",
+                    "viem",
+                    "hardhat"
+                ]
+            }
+        },
+        "linea": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "@consensys/linea-sdk",
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
+            }
+        },
+        "llamaindex": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages llama-index",
+                    "pip3 install --no-cache-dir --break-system-packages llama-index-llms-openai llama-index-llms-anthropic llama-index-llms-ollama",
+                    "pip3 install --no-cache-dir --break-system-packages llama-index-embeddings-openai llama-index-embeddings-huggingface",
+                    "pip3 install --no-cache-dir --break-system-packages llama-index-vector-stores-chroma llama-index-vector-stores-qdrant",
+                    "pip3 install --no-cache-dir --break-system-packages chromadb sentence-transformers",
+                    "python3 -c 'import llama_index; print(f\"LlamaIndex installed\")'"
+                ]
+            }
+        },
+        "milvus": {
+            "base": "base-system",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages pymilvus",
+                    "curl -sSL https://raw.githubusercontent.com/milvus-io/milvus/master/scripts/standalone_embed.sh -o /usr/local/bin/milvus-standalone.sh && chmod +x /usr/local/bin/milvus-standalone.sh",
+                    "python3 -c 'from pymilvus import connections; print(\"PyMilvus installed\")'"
+                ]
+            }
+        },
+        "minio": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "minio",
+                    "@aws-sdk/client-s3"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -sSL \"https://dl.min.io/server/minio/release/linux-${ARCH}/minio\" -o /usr/local/bin/minio && chmod +x /usr/local/bin/minio",
+                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -sSL \"https://dl.min.io/client/mc/release/linux-${ARCH}/mc\" -o /usr/local/bin/mc && chmod +x /usr/local/bin/mc",
+                    "pip3 install --no-cache-dir --break-system-packages minio boto3",
+                    "minio --version && mc --version"
+                ]
+            }
+        },
+        "mlops": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages mlflow wandb",
+                    "pip3 install --no-cache-dir --break-system-packages optuna ray[tune]",
+                    "pip3 install --no-cache-dir --break-system-packages dvc great-expectations",
+                    "pip3 install --no-cache-dir --break-system-packages onnx onnxruntime",
+                    "mlflow --version && wandb --version"
+                ]
+            }
+        },
+        "monad": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
+            }
+        },
+        "mongodb": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "mongodb",
+                    "mongoose",
+                    "@types/mongoose",
+                    "mongosh"
+                ]
+            },
+            "custom_install": {
+                "apt_packages": [
+                    "gnupg"
+                ],
+                "root_commands": [
+                    "curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg",
+                    "echo 'deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/8.0 multiverse' | tee /etc/apt/sources.list.d/mongodb-org-8.0.list",
+                    "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org && rm -rf /var/lib/apt/lists/*",
+                    "mkdir -p /data/db && chmod 777 /data/db",
+                    "mongod --version"
+                ]
+            }
+        },
+        "near": {
+            "base": "rust",
+            "packages": {
+                "npm": [
+                    "near-cli",
+                    "near-api-js",
+                    "@near-js/client",
+                    "near-seed-phrase"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "cargo install cargo-near",
+                    "rustup target add wasm32-unknown-unknown",
+                    "cargo near --version || echo 'cargo-near installed'"
+                ]
+            }
+        },
+        "ollama": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "ollama",
+                    "ollama-js"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "curl -fsSL https://ollama.ai/install.sh | sh",
+                    "ollama --version || echo 'Ollama installed'"
+                ]
+            }
+        },
+        "openzeppelin": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "@openzeppelin/contracts",
+                    "@openzeppelin/contracts-upgradeable",
+                    "@openzeppelin/upgrades-core",
+                    "@openzeppelin/defender-sdk",
+                    "@openzeppelin/hardhat-upgrades",
+                    "@openzeppelin/wizard",
+                    "hardhat",
+                    "ethers"
+                ]
+            }
+        },
+        "optimism": {
+            "base": "foundry",
+            "packages": {
+                "npm": [
+                    "@eth-optimism/sdk",
+                    "@eth-optimism/core-utils",
+                    "ethers",
+                    "viem",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "npm install -g @eth-optimism/supersim || echo 'Supersim installed for local OP Stack testing'"
+                ]
+            }
+        },
+        "pgvector": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "pg",
+                    "pgvector",
+                    "@types/pg"
+                ]
+            },
+            "custom_install": {
+                "apt_packages": [
+                    "postgresql",
+                    "postgresql-contrib",
+                    "libpq-dev"
+                ],
+                "root_commands": [
+                    "apt-get update && apt-get install -y postgresql-16-pgvector && rm -rf /var/lib/apt/lists/*",
+                    "pip3 install --no-cache-dir --break-system-packages pgvector psycopg2-binary sqlalchemy",
+                    "echo 'PostgreSQL with pgvector extension installed'"
+                ]
+            }
+        },
         "polygon": {
             "base": "foundry",
             "packages": {
@@ -102,25 +780,115 @@
                 ]
             }
         },
-        "zksync": {
-            "base": "rust",
+        "polymer": {
+            "base": "foundry",
             "packages": {
                 "npm": [
-                    "zksync-ethers",
+                    "@open-ibc/vibc-core-smart-contracts",
                     "ethers",
-                    "zksync-cli",
-                    "hardhat",
-                    "@matterlabs/hardhat-zksync"
+                    "viem",
+                    "hardhat"
+                ]
+            }
+        },
+        "pulumi": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "@pulumi/pulumi",
+                    "@pulumi/aws",
+                    "@pulumi/gcp",
+                    "@pulumi/azure-native",
+                    "@pulumi/kubernetes"
                 ]
             },
             "custom_install": {
+                "root_commands": [
+                    "curl -fsSL https://get.pulumi.com | sh",
+                    "mv /root/.pulumi/bin/* /usr/local/bin/",
+                    "pip3 install --no-cache-dir --break-system-packages pulumi pulumi-aws pulumi-gcp pulumi-kubernetes",
+                    "pulumi version"
+                ]
+            }
+        },
+        "pytorch-cpu": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu",
+                    "python3 -c 'import torch; print(f\"PyTorch {torch.__version__} (CPU)\")'"
+                ]
+            }
+        },
+        "qdrant": {
+            "base": "rust",
+            "packages": {
+                "npm": [
+                    "@qdrant/js-client-rest"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages qdrant-client",
+                    "cargo install qdrant || (curl -sSL https://github.com/qdrant/qdrant/releases/latest/download/qdrant-x86_64-unknown-linux-gnu.tar.gz | tar -xz -C /usr/local/bin || echo 'Qdrant binary installation')",
+                    "qdrant --version || echo 'Qdrant installed'"
+                ]
+            }
+        },
+        "redis": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "redis",
+                    "ioredis",
+                    "@redis/client"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "apt-get update && apt-get install -y redis-server && rm -rf /var/lib/apt/lists/*",
+                    "pip3 install --no-cache-dir --break-system-packages redis hiredis",
+                    "redis-server --version"
+                ]
+            }
+        },
+        "reth": {
+            "base": "rust",
+            "packages": {
+                "cargo": []
+            },
+            "custom_install": {
                 "env": {
-                    "PATH": "/root/.foundry-zksync/bin:/usr/local/cargo/bin:$PATH"
+                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
                 },
                 "root_commands": [
-                    "curl -L https://raw.githubusercontent.com/matter-labs/foundry-zksync/main/install-foundry-zksync | bash && /root/.foundry-zksync/bin/foundryup-zksync && chmod -R a+rx /root/.foundry-zksync",
-                    "curl -L https://raw.githubusercontent.com/matter-labs/anvil-zksync/main/scripts/install.sh | bash && chmod -R a+rx /root/.anvil-zksync || echo 'anvil-zksync installed'",
-                    "forge --version && cast --version || echo 'foundry-zksync installed'"
+                    "cargo install --git https://github.com/paradigmxyz/reth.git --locked reth",
+                    "reth --version"
+                ]
+            }
+        },
+        "risc0": {
+            "base": "rust",
+            "packages": {
+                "cargo": []
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.risc0/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "cargo install cargo-risczero && cargo risczero install || echo 'RISC Zero toolchain installed'"
+                ]
+            }
+        },
+        "slack-api": {
+            "base": "base-system",
+            "custom_install": {
+                "commands": [
+                    "pip install slack_sdk",
+                    "pip install slack_sdk[optional]",
+                    "pip3 install proxy.py"
                 ]
             }
         },
@@ -155,35 +923,36 @@
                 ]
             }
         },
-        "sui": {
-            "base": "rust",
+        "soneium": {
+            "base": "foundry",
             "packages": {
-                "cargo": []
-            },
-            "custom_install": {
-                "env": {
-                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
-                },
-                "root_commands": [
-                    "cargo install --locked --git https://github.com/MystenLabs/sui.git --branch mainnet sui"
+                "npm": [
+                    "ethers",
+                    "viem",
+                    "@wagmi/core",
+                    "hardhat",
+                    "@nomicfoundation/hardhat-toolbox"
                 ]
             }
         },
-        "aptos": {
+        "starknet": {
             "base": "rust",
             "packages": {
-                "cargo": []
+                "npm": [
+                    "starknet",
+                    "get-starknet",
+                    "@starknet-io/types-js"
+                ]
             },
             "custom_install": {
                 "env": {
                     "PATH": "/root/.local/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
                 },
-                "apt_packages": [
-                    "python3-pip"
-                ],
                 "root_commands": [
-                    "cargo install --git https://github.com/aptos-labs/aptos-core.git aptos --locked",
-                    "aptos --version || echo 'Aptos CLI installed'"
+                    "curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh",
+                    "curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh",
+                    "if [ -f /root/.local/bin/snfoundryup ]; then /root/.local/bin/snfoundryup; fi",
+                    "pip3 install --no-cache-dir --break-system-packages cairo-lang starknet-py"
                 ]
             }
         },
@@ -197,6 +966,35 @@
             "custom_install": {
                 "root_commands": [
                     "rustup target add wasm32-unknown-unknown"
+                ]
+            }
+        },
+        "succinct": {
+            "base": "rust",
+            "packages": {
+                "cargo": []
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.sp1/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "curl -L https://sp1.succinct.xyz | bash",
+                    "if [ -f /root/.sp1/bin/sp1up ]; then /root/.sp1/bin/sp1up; cargo prove --version; else echo 'SP1 not installed'; fi"
+                ]
+            }
+        },
+        "sui": {
+            "base": "rust",
+            "packages": {
+                "cargo": []
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "cargo install --locked --git https://github.com/MystenLabs/sui.git --branch mainnet sui"
                 ]
             }
         },
@@ -224,42 +1022,72 @@
                 ]
             }
         },
-        "reth": {
-            "base": "rust",
-            "packages": {
-                "cargo": []
-            },
-            "custom_install": {
-                "env": {
-                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
-                },
-                "root_commands": [
-                    "cargo install --git https://github.com/paradigmxyz/reth.git --locked reth",
-                    "reth --version"
-                ]
-            }
-        },
-        "foundry": {
+        "tempo": {
             "base": "foundry",
             "packages": {
                 "npm": [
                     "ethers",
                     "viem",
                     "hardhat",
-                    "@nomicfoundation/hardhat-toolbox",
-                    "@nomicfoundation/hardhat-foundry"
+                    "@nomicfoundation/hardhat-toolbox"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.tempo/bin:/root/.foundry/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "git clone https://github.com/tempoxyz/tempo.git /tmp/tempo && cd /tmp/tempo && git checkout 7e2c66842c2ef99e3f0670c63d9b92df20195af6 && cargo build --release && mkdir -p /root/.tempo/bin && cp target/release/tempo* /root/.tempo/bin/ 2>/dev/null || echo 'Tempo binaries copied' && chmod -R a+rx /root/.tempo && rm -rf /tmp/tempo",
+                    "echo 'Tempo node built from https://github.com/tempoxyz/tempo at 7e2c66842c2ef99e3f0670c63d9b92df20195af6'"
                 ]
             }
         },
-        "hardhat": {
-            "base": "foundry",
+        "tensorflow-cpu": {
+            "base": "scientific-python",
+            "packages": {},
+            "custom_install": {
+                "root_commands": [
+                    "pip3 install --no-cache-dir --break-system-packages tensorflow-cpu keras",
+                    "python3 -c 'import tensorflow as tf; print(f\"TensorFlow {tf.__version__} (CPU)\")'"
+                ]
+            }
+        },
+        "terraform": {
+            "base": "base-system",
             "packages": {
                 "npm": [
-                    "hardhat",
-                    "@nomicfoundation/hardhat-toolbox",
-                    "@nomicfoundation/hardhat-verify",
-                    "ethers",
-                    "viem"
+                    "cdktf-cli",
+                    "@cdktf/provider-aws",
+                    "@cdktf/provider-google"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg",
+                    "echo 'deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com noble main' | tee /etc/apt/sources.list.d/hashicorp.list",
+                    "apt-get update && apt-get install -y terraform && rm -rf /var/lib/apt/lists/*",
+                    "curl -sSL https://get.opentofu.org/install-opentofu.sh | bash -s -- --install-method deb",
+                    "pip3 install --no-cache-dir --break-system-packages python-terraform",
+                    "terraform version && tofu version"
+                ]
+            }
+        },
+        "ton": {
+            "base": "base-system",
+            "packages": {
+                "npm": [
+                    "@ton/core",
+                    "@ton/crypto",
+                    "@ton/ton",
+                    "@ton/blueprint",
+                    "@tact-lang/compiler",
+                    "ton-access"
+                ]
+            },
+            "custom_install": {
+                "root_commands": [
+                    "npm install -g @ton-community/func-js",
+                    "pip3 install --no-cache-dir --break-system-packages toncli || echo 'toncli installed'"
                 ]
             }
         },
@@ -324,375 +1152,6 @@
                 ]
             }
         },
-        "arbitrum": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "@arbitrum/sdk",
-                    "ethers",
-                    "viem",
-                    "hardhat",
-                    "@nomicfoundation/hardhat-toolbox"
-                ]
-            }
-        },
-        "optimism": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "@eth-optimism/sdk",
-                    "@eth-optimism/core-utils",
-                    "ethers",
-                    "viem",
-                    "hardhat",
-                    "@nomicfoundation/hardhat-toolbox"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "npm install -g @eth-optimism/supersim || echo 'Supersim installed for local OP Stack testing'"
-                ]
-            }
-        },
-        "gelato": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "@gelatonetwork/automate-sdk",
-                    "@gelatonetwork/relay-sdk",
-                    "@gelatonetwork/web3-functions-sdk",
-                    "ethers",
-                    "viem",
-                    "hardhat"
-                ]
-            }
-        },
-        "hyperlane": {
-            "base": "rust",
-            "packages": {
-                "npm": [
-                    "@hyperlane-xyz/sdk",
-                    "@hyperlane-xyz/core",
-                    "@hyperlane-xyz/utils",
-                    "@hyperlane-xyz/cli",
-                    "ethers",
-                    "viem"
-                ]
-            },
-            "custom_install": {
-                "env": {
-                    "PATH": "/root/.foundry/bin:/usr/local/cargo/bin:$PATH"
-                },
-                "root_commands": [
-                    "curl -L https://foundry.paradigm.xyz | bash && /root/.foundry/bin/foundryup && chmod -R a+rx /root/.foundry",
-                    "git clone --depth 1 https://github.com/hyperlane-xyz/hyperlane-monorepo.git /tmp/hyperlane && cd /tmp/hyperlane/rust && cargo build --release --bin validator --bin relayer && cp target/release/validator target/release/relayer /usr/local/bin/ && chmod +x /usr/local/bin/validator /usr/local/bin/relayer && rm -rf /tmp/hyperlane",
-                    "validator --help || echo 'Hyperlane validator installed'",
-                    "relayer --help || echo 'Hyperlane relayer installed'"
-                ]
-            }
-        },
-        "gnosis": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "@safe-global/protocol-kit",
-                    "@safe-global/api-kit",
-                    "@safe-global/safe-core-sdk-types",
-                    "@gnosis.pm/zodiac",
-                    "@gnosis.pm/safe-deployments",
-                    "ethers",
-                    "viem",
-                    "hardhat"
-                ]
-            }
-        },
-        "hyperliquid": {
-            "base": "rust",
-            "packages": {
-                "npm": [
-                    "ethers",
-                    "viem"
-                ]
-            },
-            "custom_install": {
-                "env": {
-                    "PATH": "/root/bin:/usr/local/cargo/bin:$PATH"
-                },
-                "root_commands": [
-                    "pip3 install --no-cache-dir --break-system-packages hyperliquid-python-sdk",
-                    "mkdir -p /root/bin && curl -sSL https://binaries.hyperliquid.xyz/Testnet/hl-visor -o /root/bin/hl-visor && chmod +x /root/bin/hl-visor",
-                    "git clone https://github.com/hyperliquid-dex/node.git /opt/hyperliquid-node && cd /opt/hyperliquid-node && git checkout 8a2c4b9e5757aafae5079f8236e3bf6752f7d81b && chmod -R a+r /opt/hyperliquid-node",
-                    "/root/bin/hl-visor --help || echo 'Hyperliquid visor installed'"
-                ]
-            }
-        },
-        "lifi": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "@lifi/sdk",
-                    "@lifi/types",
-                    "@lifi/wallet-management",
-                    "ethers",
-                    "viem",
-                    "hardhat"
-                ]
-            }
-        },
-        "linea": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "@consensys/linea-sdk",
-                    "ethers",
-                    "viem",
-                    "hardhat",
-                    "@nomicfoundation/hardhat-toolbox"
-                ]
-            }
-        },
-        "mongodb": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "mongodb",
-                    "mongoose",
-                    "@types/mongoose",
-                    "mongosh"
-                ]
-            },
-            "custom_install": {
-                "apt_packages": [
-                    "gnupg"
-                ],
-                "root_commands": [
-                    "curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg",
-                    "echo 'deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/8.0 multiverse' | tee /etc/apt/sources.list.d/mongodb-org-8.0.list",
-                    "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y mongodb-org && rm -rf /var/lib/apt/lists/*",
-                    "mkdir -p /data/db && chmod 777 /data/db",
-                    "mongod --version"
-                ]
-            }
-        },
-        "openzeppelin": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "@openzeppelin/contracts",
-                    "@openzeppelin/contracts-upgradeable",
-                    "@openzeppelin/upgrades-core",
-                    "@openzeppelin/defender-sdk",
-                    "@openzeppelin/hardhat-upgrades",
-                    "@openzeppelin/wizard",
-                    "hardhat",
-                    "ethers"
-                ]
-            }
-        },
-        "polymer": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "@open-ibc/vibc-core-smart-contracts",
-                    "ethers",
-                    "viem",
-                    "hardhat"
-                ]
-            }
-        },
-        "soneium": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "ethers",
-                    "viem",
-                    "@wagmi/core",
-                    "hardhat",
-                    "@nomicfoundation/hardhat-toolbox"
-                ]
-            }
-        },
-        "starknet": {
-            "base": "rust",
-            "packages": {
-                "npm": [
-                    "starknet",
-                    "get-starknet",
-                    "@starknet-io/types-js"
-                ]
-            },
-            "custom_install": {
-                "env": {
-                    "PATH": "/root/.local/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
-                },
-                "root_commands": [
-                    "curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh",
-                    "curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh",
-                    "if [ -f /root/.local/bin/snfoundryup ]; then /root/.local/bin/snfoundryup; fi",
-                    "pip3 install --no-cache-dir --break-system-packages cairo-lang starknet-py"
-                ]
-            }
-        },
-        "chainlink": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "@chainlink/contracts",
-                    "@chainlink/functions-toolkit",
-                    "@chainlink/local",
-                    "ethers",
-                    "viem",
-                    "hardhat",
-                    "@nomicfoundation/hardhat-toolbox"
-                ]
-            }
-        },
-        "tempo": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "ethers",
-                    "viem",
-                    "hardhat",
-                    "@nomicfoundation/hardhat-toolbox"
-                ]
-            },
-            "custom_install": {
-                "env": {
-                    "PATH": "/root/.tempo/bin:/root/.foundry/bin:/usr/local/cargo/bin:$PATH"
-                },
-                "root_commands": [
-                    "git clone https://github.com/tempoxyz/tempo.git /tmp/tempo && cd /tmp/tempo && git checkout 7e2c66842c2ef99e3f0670c63d9b92df20195af6 && cargo build --release && mkdir -p /root/.tempo/bin && cp target/release/tempo* /root/.tempo/bin/ 2>/dev/null || echo 'Tempo binaries copied' && chmod -R a+rx /root/.tempo && rm -rf /tmp/tempo",
-                    "echo 'Tempo node built from https://github.com/tempoxyz/tempo at 7e2c66842c2ef99e3f0670c63d9b92df20195af6'"
-                ]
-            }
-        },
-        "near": {
-            "base": "rust",
-            "packages": {
-                "npm": [
-                    "near-cli",
-                    "near-api-js",
-                    "@near-js/client",
-                    "near-seed-phrase"
-                ]
-            },
-            "custom_install": {
-                "env": {
-                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
-                },
-                "root_commands": [
-                    "cargo install cargo-near",
-                    "rustup target add wasm32-unknown-unknown",
-                    "cargo near --version || echo 'cargo-near installed'"
-                ]
-            }
-        },
-        "ton": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "@ton/core",
-                    "@ton/crypto",
-                    "@ton/ton",
-                    "@ton/blueprint",
-                    "@tact-lang/compiler",
-                    "ton-access"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "npm install -g @ton-community/func-js",
-                    "pip3 install --no-cache-dir --break-system-packages toncli || echo 'toncli installed'"
-                ]
-            }
-        },
-        "monad": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "ethers",
-                    "viem",
-                    "hardhat",
-                    "@nomicfoundation/hardhat-toolbox"
-                ]
-            }
-        },
-        "pytorch-cpu": {
-            "base": "scientific-python",
-            "packages": {},
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir --break-system-packages torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu",
-                    "python3 -c 'import torch; print(f\"PyTorch {torch.__version__} (CPU)\")'"
-                ]
-            }
-        },
-        "tensorflow-cpu": {
-            "base": "scientific-python",
-            "packages": {},
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir --break-system-packages tensorflow-cpu keras",
-                    "python3 -c 'import tensorflow as tf; print(f\"TensorFlow {tf.__version__} (CPU)\")'"
-                ]
-            }
-        },
-        "huggingface-cpu": {
-            "base": "scientific-python",
-            "packages": {},
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir --break-system-packages torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu",
-                    "pip3 install --no-cache-dir --break-system-packages transformers datasets tokenizers accelerate peft diffusers safetensors huggingface_hub",
-                    "pip3 install --no-cache-dir --break-system-packages sentencepiece protobuf",
-                    "python3 -c 'import transformers; print(f\"Transformers {transformers.__version__}\")'"
-                ]
-            }
-        },
-        "langchain": {
-            "base": "scientific-python",
-            "packages": {
-                "npm": [
-                    "langchain",
-                    "@langchain/core",
-                    "@langchain/openai",
-                    "@langchain/anthropic",
-                    "@langchain/community"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir --break-system-packages langchain langchain-core langchain-community langchain-openai langchain-anthropic",
-                    "pip3 install --no-cache-dir --break-system-packages langgraph langsmith langserve",
-                    "pip3 install --no-cache-dir --break-system-packages chromadb faiss-cpu sentence-transformers",
-                    "python3 -c 'import langchain; print(f\"LangChain {langchain.__version__}\")'"
-                ]
-            },
-            "cache_warm": {
-                "pip": [
-                    "openai",
-                    "anthropic",
-                    "tiktoken",
-                    "chromadb",
-                    "sentence-transformers"
-                ]
-            }
-        },
-        "llamaindex": {
-            "base": "scientific-python",
-            "packages": {},
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir --break-system-packages llama-index",
-                    "pip3 install --no-cache-dir --break-system-packages llama-index-llms-openai llama-index-llms-anthropic llama-index-llms-ollama",
-                    "pip3 install --no-cache-dir --break-system-packages llama-index-embeddings-openai llama-index-embeddings-huggingface",
-                    "pip3 install --no-cache-dir --break-system-packages llama-index-vector-stores-chroma llama-index-vector-stores-qdrant",
-                    "pip3 install --no-cache-dir --break-system-packages chromadb sentence-transformers",
-                    "python3 -c 'import llama_index; print(f\"LlamaIndex installed\")'"
-                ]
-            }
-        },
         "vllm-cpu": {
             "base": "scientific-python",
             "packages": {},
@@ -701,109 +1160,6 @@
                     "pip3 install --no-cache-dir --break-system-packages vllm --extra-index-url https://download.pytorch.org/whl/cpu || echo 'vLLM CPU build may have limited support'",
                     "pip3 install --no-cache-dir --break-system-packages openai",
                     "echo 'vLLM CPU installed (limited functionality compared to GPU version)'"
-                ]
-            }
-        },
-        "ollama": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "ollama",
-                    "ollama-js"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "curl -fsSL https://ollama.ai/install.sh | sh",
-                    "ollama --version || echo 'Ollama installed'"
-                ]
-            }
-        },
-        "jupyter": {
-            "base": "scientific-python",
-            "packages": {},
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir --break-system-packages jupyterlab-git jupyterlab-lsp python-lsp-server[all]",
-                    "pip3 install --no-cache-dir --break-system-packages nbconvert nbformat papermill",
-                    "pip3 install --no-cache-dir --break-system-packages ipywidgets plotly bokeh altair",
-                    "jupyter lab --version"
-                ]
-            }
-        },
-        "mlops": {
-            "base": "scientific-python",
-            "packages": {},
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir --break-system-packages mlflow wandb",
-                    "pip3 install --no-cache-dir --break-system-packages optuna ray[tune]",
-                    "pip3 install --no-cache-dir --break-system-packages dvc great-expectations",
-                    "pip3 install --no-cache-dir --break-system-packages onnx onnxruntime",
-                    "mlflow --version && wandb --version"
-                ]
-            }
-        },
-        "qdrant": {
-            "base": "rust",
-            "packages": {
-                "npm": [
-                    "@qdrant/js-client-rest"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir --break-system-packages qdrant-client",
-                    "cargo install qdrant || (curl -sSL https://github.com/qdrant/qdrant/releases/latest/download/qdrant-x86_64-unknown-linux-gnu.tar.gz | tar -xz -C /usr/local/bin || echo 'Qdrant binary installation')",
-                    "qdrant --version || echo 'Qdrant installed'"
-                ]
-            }
-        },
-        "chromadb": {
-            "base": "scientific-python",
-            "packages": {
-                "npm": [
-                    "chromadb",
-                    "chromadb-default-embed"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir --break-system-packages chromadb sentence-transformers",
-                    "python3 -c 'import chromadb; print(f\"ChromaDB {chromadb.__version__}\")'"
-                ]
-            }
-        },
-        "pgvector": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "pg",
-                    "pgvector",
-                    "@types/pg"
-                ]
-            },
-            "custom_install": {
-                "apt_packages": [
-                    "postgresql",
-                    "postgresql-contrib",
-                    "libpq-dev"
-                ],
-                "root_commands": [
-                    "apt-get update && apt-get install -y postgresql-16-pgvector && rm -rf /var/lib/apt/lists/*",
-                    "pip3 install --no-cache-dir --break-system-packages pgvector psycopg2-binary sqlalchemy",
-                    "echo 'PostgreSQL with pgvector extension installed'"
-                ]
-            }
-        },
-        "milvus": {
-            "base": "base-system",
-            "packages": {},
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir --break-system-packages pymilvus",
-                    "curl -sSL https://raw.githubusercontent.com/milvus-io/milvus/master/scripts/standalone_embed.sh -o /usr/local/bin/milvus-standalone.sh && chmod +x /usr/local/bin/milvus-standalone.sh",
-                    "python3 -c 'from pymilvus import connections; print(\"PyMilvus installed\")'"
                 ]
             }
         },
@@ -819,208 +1175,6 @@
                 "root_commands": [
                     "pip3 install --no-cache-dir --break-system-packages weaviate-client",
                     "python3 -c 'import weaviate; print(f\"Weaviate client {weaviate.__version__}\")'"
-                ]
-            }
-        },
-        "redis": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "redis",
-                    "ioredis",
-                    "@redis/client"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "apt-get update && apt-get install -y redis-server && rm -rf /var/lib/apt/lists/*",
-                    "pip3 install --no-cache-dir --break-system-packages redis hiredis",
-                    "redis-server --version"
-                ]
-            }
-        },
-        "kafka": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "kafkajs",
-                    "@confluentinc/kafka-javascript"
-                ]
-            },
-            "custom_install": {
-                "apt_packages": [
-                    "default-jdk"
-                ],
-                "root_commands": [
-                    "curl -sSL https://downloads.apache.org/kafka/3.7.0/kafka_2.13-3.7.0.tgz | tar -xz -C /opt",
-                    "ln -s /opt/kafka_2.13-3.7.0 /opt/kafka",
-                    "chmod -R a+rx /opt/kafka",
-                    "pip3 install --no-cache-dir --break-system-packages kafka-python confluent-kafka",
-                    "echo 'export PATH=$PATH:/opt/kafka/bin' >> /etc/profile.d/kafka.sh",
-                    "/opt/kafka/bin/kafka-topics.sh --version || echo 'Kafka installed'"
-                ]
-            }
-        },
-        "elasticsearch": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "@elastic/elasticsearch",
-                    "elasticsearch"
-                ]
-            },
-            "custom_install": {
-                "apt_packages": [
-                    "default-jdk"
-                ],
-                "root_commands": [
-                    "curl -fsSL https://artifacts.elastic.co/GPG-KEY-elasticsearch | gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg",
-                    "echo 'deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main' | tee /etc/apt/sources.list.d/elastic-8.x.list",
-                    "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y elasticsearch && rm -rf /var/lib/apt/lists/*",
-                    "pip3 install --no-cache-dir --break-system-packages elasticsearch",
-                    "echo 'Elasticsearch installed (run with: systemctl start elasticsearch)'"
-                ]
-            }
-        },
-        "clickhouse": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "@clickhouse/client"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "curl -fsSL https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key | gpg --dearmor -o /usr/share/keyrings/clickhouse-keyring.gpg",
-                    "echo 'deb [signed-by=/usr/share/keyrings/clickhouse-keyring.gpg] https://packages.clickhouse.com/deb stable main' | tee /etc/apt/sources.list.d/clickhouse.list",
-                    "apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y clickhouse-server clickhouse-client && rm -rf /var/lib/apt/lists/*",
-                    "pip3 install --no-cache-dir --break-system-packages clickhouse-connect clickhouse-driver",
-                    "clickhouse-client --version"
-                ]
-            }
-        },
-        "minio": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "minio",
-                    "@aws-sdk/client-s3"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -sSL \"https://dl.min.io/server/minio/release/linux-${ARCH}/minio\" -o /usr/local/bin/minio && chmod +x /usr/local/bin/minio",
-                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -sSL \"https://dl.min.io/client/mc/release/linux-${ARCH}/mc\" -o /usr/local/bin/mc && chmod +x /usr/local/bin/mc",
-                    "pip3 install --no-cache-dir --break-system-packages minio boto3",
-                    "minio --version && mc --version"
-                ]
-            }
-        },
-        "kubernetes": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "@kubernetes/client-node"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${ARCH}/kubectl\" && install kubectl /usr/local/bin/kubectl && rm kubectl",
-                    "curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash",
-                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -Lo /usr/local/bin/kind \"https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-${ARCH}\" && chmod +x /usr/local/bin/kind",
-                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -Lo /usr/local/bin/k9s.tar.gz \"https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_${ARCH}.tar.gz\" && tar -xzf /usr/local/bin/k9s.tar.gz -C /usr/local/bin k9s && rm /usr/local/bin/k9s.tar.gz",
-                    "ARCH=$(uname -m) && if [ \"$ARCH\" = \"x86_64\" ]; then ARCH=\"amd64\"; elif [ \"$ARCH\" = \"aarch64\" ]; then ARCH=\"arm64\"; fi && curl -Lo /usr/local/bin/kustomize.tar.gz \"https://github.com/kubernetes-sigs/kustomize/releases/latest/download/kustomize_v5.4.1_linux_${ARCH}.tar.gz\" && tar -xzf /usr/local/bin/kustomize.tar.gz -C /usr/local/bin && rm /usr/local/bin/kustomize.tar.gz",
-                    "pip3 install --no-cache-dir --break-system-packages kubernetes",
-                    "kubectl version --client && helm version && kind version && k9s version"
-                ]
-            }
-        },
-        "terraform": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "cdktf-cli",
-                    "@cdktf/provider-aws",
-                    "@cdktf/provider-google"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg",
-                    "echo 'deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com noble main' | tee /etc/apt/sources.list.d/hashicorp.list",
-                    "apt-get update && apt-get install -y terraform && rm -rf /var/lib/apt/lists/*",
-                    "curl -sSL https://get.opentofu.org/install-opentofu.sh | bash -s -- --install-method deb",
-                    "pip3 install --no-cache-dir --break-system-packages python-terraform",
-                    "terraform version && tofu version"
-                ]
-            }
-        },
-        "pulumi": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "@pulumi/pulumi",
-                    "@pulumi/aws",
-                    "@pulumi/gcp",
-                    "@pulumi/azure-native",
-                    "@pulumi/kubernetes"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "curl -fsSL https://get.pulumi.com | sh",
-                    "mv /root/.pulumi/bin/* /usr/local/bin/",
-                    "pip3 install --no-cache-dir --break-system-packages pulumi pulumi-aws pulumi-gcp pulumi-kubernetes",
-                    "pulumi version"
-                ]
-            }
-        },
-        "base-l2": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "@coinbase/onchainkit",
-                    "@coinbase/wallet-sdk",
-                    "@coinbase/cdp-sdk",
-                    "@coinbase/agentkit",
-                    "frames.js",
-                    "@farcaster/hub-nodejs",
-                    "permissionless",
-                    "viem",
-                    "wagmi",
-                    "ethers",
-                    "localtunnel"
-                ]
-            },
-            "cache_warm": {
-                "npm": [
-                    "@coinbase/onchainkit@latest",
-                    "@coinbase/wallet-sdk@latest",
-                    "@coinbase/cdp-sdk@latest",
-                    "@coinbase/agentkit@latest",
-                    "frames.js@latest",
-                    "permissionless@latest",
-                    "@x402/fetch@latest",
-                    "@x402/axios@latest",
-                    "@x402/express@latest",
-                    "@rainbow-me/rainbowkit@latest"
-                ]
-            },
-            "custom_install": {
-                "env": {
-                    "BASE_MAINNET_RPC": "https://mainnet.base.org",
-                    "BASE_SEPOLIA_RPC": "https://sepolia.base.org",
-                    "ENTRYPOINT_ADDRESS": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
-                    "TEST_MNEMONIC": "test test test test test test test test test test test junk",
-                    "USDC_BASE_SEPOLIA": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
-                },
-                "root_commands": [
-                    "mkdir -p /home/agent/.base-dev/scripts",
-                    "echo '#!/bin/bash\\n# Start anvil with pre-funded accounts (10000 ETH each)\\n# Mnemonic: test test test test test test test test test test test junk\\n# Account 0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\\n# Account 1: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8\\necho \"Starting Base Sepolia fork with pre-funded accounts...\"\\nanvil --fork-url https://sepolia.base.org --chain-id 84532 --balance 10000 --accounts 10 --mnemonic \"test test test test test test test test test test test junk\" \"$@\"' > /home/agent/.base-dev/start-base-fork.sh",
-                    "echo '#!/bin/bash\\n# Mint test USDC to an address on local anvil\\nADDRESS=${1:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}\\nAMOUNT=${2:-1000000000000}  # 1M USDC (6 decimals)\\nRPC=${3:-http://127.0.0.1:8545}\\nUSDC=0x036CbD53842c5426634e7929541eC2318f3dCF7e\\necho \"Minting $AMOUNT USDC to $ADDRESS...\"\\n# Use foundry deal to set USDC balance (works on anvil forks)\\ncast rpc anvil_setBalance $ADDRESS 0x21e19e0c9bab2400000 --rpc-url $RPC 2>/dev/null\\n# For ERC20, we use storage slot manipulation. USDC uses slot 9 for balances.\\nSLOT=$(cast keccak $(cast abi-encode \"f(address,uint256)\" $ADDRESS 9))\\ncast rpc anvil_setStorageAt $USDC $SLOT $(cast to-uint256 $AMOUNT) --rpc-url $RPC\\necho \"Done. Check balance: cast call $USDC balanceOf(address)(uint256) $ADDRESS --rpc-url $RPC\"' > /home/agent/.base-dev/scripts/mint-usdc.sh",
-                    "echo '#!/bin/bash\\n# Show test account info\\necho \"=== Pre-funded Test Accounts ===\"\\necho \"Mnemonic: test test test test test test test test test test test junk\"\\necho \"\"\\necho \"Account 0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\"\\necho \"Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80\"\\necho \"\"\\necho \"Account 1: 0x70997970C51812dc3A010C7d01b50e0d17dc79C8\"\\necho \"Private Key: 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d\"\\necho \"\"\\necho \"Account 2: 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC\"\\necho \"Private Key: 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a\"\\necho \"\"\\necho \"All accounts have 10000 ETH on local anvil fork.\"' > /home/agent/.base-dev/scripts/show-accounts.sh",
-                    "chmod +x /home/agent/.base-dev/*.sh /home/agent/.base-dev/scripts/*.sh",
-                    "chown -R agent:agent /home/agent/.base-dev"
                 ]
             }
         },
@@ -1080,166 +1234,6 @@
                 ]
             }
         },
-        "base-aa": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "permissionless",
-                    "@coinbase/wallet-sdk",
-                    "@coinbase/onchainkit",
-                    "viem",
-                    "wagmi",
-                    "ethers",
-                    "@pimlico/alto",
-                    "userop",
-                    "@account-abstraction/sdk",
-                    "@account-abstraction/contracts",
-                    "localtunnel"
-                ]
-            },
-            "cache_warm": {
-                "npm": [
-                    "permissionless@latest",
-                    "@coinbase/wallet-sdk@latest",
-                    "@coinbase/onchainkit@latest",
-                    "@pimlico/alto@latest",
-                    "userop@latest",
-                    "@account-abstraction/sdk@latest"
-                ]
-            },
-            "custom_install": {
-                "env": {
-                    "ENTRYPOINT_V06": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
-                    "ENTRYPOINT_V07": "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
-                    "BASE_SEPOLIA_RPC": "https://sepolia.base.org",
-                    "TEST_MNEMONIC": "test test test test test test test test test test test junk",
-                    "BUNDLER_RPC": "http://localhost:4337"
-                },
-                "root_commands": [
-                    "mkdir -p /home/agent/.aa-dev/scripts /home/agent/.aa-dev/contracts",
-                    "echo '#!/bin/bash\\n# Start the full AA development stack (anvil + bundler)\\necho \"=== Account Abstraction Development Stack ===\"\\necho \"\"\\necho \"Starting Base Sepolia fork with pre-funded accounts...\"\\nanvil --fork-url https://sepolia.base.org --chain-id 84532 --balance 10000 --accounts 10 --mnemonic \"test test test test test test test test test test test junk\" --port 8545 &\\nANVIL_PID=$!\\nsleep 3\\necho \"Anvil running on http://localhost:8545\"\\necho \"\"\\necho \"Starting Alto bundler on port 4337...\"\\nnpx @pimlico/alto --rpc-url http://127.0.0.1:8545 --entry-points 0x0000000071727De22E5E9d8BAf0edAc6f37da032 --port 4337 &\\nBUNDLER_PID=$!\\nsleep 2\\necho \"Bundler running on http://localhost:4337\"\\necho \"\"\\necho \"=== Test Accounts ===\"\\necho \"Account 0 (Bundler Signer): 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\"\\necho \"Private Key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80\"\\necho \"\"\\necho \"=== Contract Addresses ===\"\\necho \"EntryPoint v0.7: 0x0000000071727De22E5E9d8BAf0edAc6f37da032\"\\necho \"EntryPoint v0.6: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789\"\\necho \"\"\\necho \"Press Ctrl+C to stop all services...\"\\nfunction cleanup { kill $ANVIL_PID $BUNDLER_PID 2>/dev/null; exit 0; }\\ntrap cleanup SIGINT SIGTERM\\nwait' > /home/agent/.aa-dev/start-aa-stack.sh",
-                    "echo '#!/bin/bash\\n# Deploy a simple verifying paymaster for testing\\necho \"Deploying test verifying paymaster...\"\\n# This is a placeholder - in production you would deploy actual paymaster contracts\\necho \"For production paymasters, see: https://docs.pimlico.io/paymaster\"\\necho \"\"\\necho \"Available paymaster options:\"\\necho \"1. Pimlico Paymaster (hosted): https://api.pimlico.io/v2/base-sepolia/rpc?apikey=YOUR_KEY\"\\necho \"2. Coinbase Smart Wallet (gasless for eligible txs)\"\\necho \"3. Deploy your own VerifyingPaymaster contract\"' > /home/agent/.aa-dev/scripts/deploy-paymaster.sh",
-                    "echo '#!/bin/bash\\n# Show AA stack info\\necho \"=== Account Abstraction Stack Info ===\"\\necho \"\"\\necho \"EntryPoint v0.7: 0x0000000071727De22E5E9d8BAf0edAc6f37da032\"\\necho \"EntryPoint v0.6: 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789\"\\necho \"\"\\necho \"Bundler Endpoints:\"\\necho \"  Local Alto: http://localhost:4337\"\\necho \"  Pimlico: https://api.pimlico.io/v2/base-sepolia/rpc?apikey=YOUR_KEY\"\\necho \"  Alchemy: https://base-sepolia.g.alchemy.com/v2/YOUR_KEY\"\\necho \"\"\\necho \"Smart Account Factories (Base Sepolia):\"\\necho \"  Coinbase Smart Wallet: 0x0BA5ED0c6AA8c49038F819E587E2633c4A9F428a\"\\necho \"  Safe Proxy Factory: 0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2\"\\necho \"  Kernel v3 Factory: 0x6723b44Abeec4E71eBE3232BD5B455805baDD22f\"' > /home/agent/.aa-dev/scripts/show-info.sh",
-                    "chmod +x /home/agent/.aa-dev/*.sh /home/agent/.aa-dev/scripts/*.sh",
-                    "chown -R agent:agent /home/agent/.aa-dev"
-                ]
-            }
-        },
-        "ai-agent-web3": {
-            "base": "scientific-python",
-            "packages": {
-                "npm": [
-                    "@coinbase/agentkit",
-                    "@coinbase/cdp-sdk",
-                    "@x402/fetch",
-                    "@xmtp/xmtp-js",
-                    "viem",
-                    "wagmi",
-                    "langchain",
-                    "@langchain/core",
-                    "@langchain/openai",
-                    "@langchain/anthropic"
-                ]
-            },
-            "cache_warm": {
-                "npm": [
-                    "@coinbase/agentkit@latest",
-                    "@coinbase/cdp-sdk@latest",
-                    "@x402/fetch@latest",
-                    "@xmtp/xmtp-js@latest",
-                    "permissionless@latest"
-                ]
-            },
-            "custom_install": {
-                "root_commands": [
-                    "pip3 install --no-cache-dir --break-system-packages langchain langchain-core langchain-openai langchain-anthropic",
-                    "pip3 install --no-cache-dir --break-system-packages langgraph langsmith",
-                    "pip3 install --no-cache-dir --break-system-packages web3 eth-account",
-                    "pip3 install --no-cache-dir --break-system-packages chromadb sentence-transformers",
-                    "python3 -c 'import langchain; import web3; print(f\"LangChain {langchain.__version__}, Web3.py installed\")'"
-                ]
-            }
-        },
-        "farcaster": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "frames.js",
-                    "@farcaster/hub-nodejs",
-                    "@farcaster/core",
-                    "@coinbase/onchainkit",
-                    "viem",
-                    "wagmi",
-                    "hono",
-                    "next"
-                ]
-            },
-            "cache_warm": {
-                "npm": [
-                    "frames.js@latest",
-                    "@farcaster/hub-nodejs@latest",
-                    "@coinbase/onchainkit@latest",
-                    "frog@latest"
-                ]
-            }
-        },
-        "xmtp": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "@xmtp/xmtp-js",
-                    "@xmtp/react-sdk",
-                    "@xmtp/content-type-text",
-                    "@xmtp/content-type-reaction",
-                    "@xmtp/content-type-reply",
-                    "@xmtp/content-type-remote-attachment",
-                    "viem",
-                    "ethers"
-                ]
-            },
-            "cache_warm": {
-                "npm": [
-                    "@xmtp/xmtp-js@latest",
-                    "@xmtp/react-sdk@latest",
-                    "@xmtp/mls-client@latest"
-                ]
-            }
-        },
-        "convex": {
-            "base": "base-system",
-            "packages": {
-                "npm": [
-                    "convex",
-                    "convex-dev"
-                ]
-            },
-            "cache_warm": {
-                "npm": [
-                    "convex@latest",
-                    "convex-helpers@latest",
-                    "@convex-dev/auth@latest"
-                ]
-            }
-        },
-        "brevis": {
-            "base": "foundry",
-            "packages": {
-                "npm": [
-                    "ethers",
-                    "viem",
-                    "hardhat"
-                ]
-            },
-            "custom_install": {
-                "env": {
-                    "PATH": "/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
-                },
-                "root_commands": [
-                    "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y",
-                    "echo 'Brevis ZK coprocessor development environment ready'"
-                ]
-            }
-        },
         "xlayer": {
             "base": "foundry",
             "packages": {
@@ -1276,31 +1270,47 @@
                 ]
             }
         },
-        "blockscout": {
+        "xmtp": {
             "base": "base-system",
             "packages": {
                 "npm": [
-                    "axios",
-                    "graphql-request",
+                    "@xmtp/xmtp-js",
+                    "@xmtp/react-sdk",
+                    "@xmtp/content-type-text",
+                    "@xmtp/content-type-reaction",
+                    "@xmtp/content-type-reply",
+                    "@xmtp/content-type-remote-attachment",
                     "viem",
-                    "ethers",
-                    "@evmexplorer/blockscout",
-                    "@blockscout/app-sdk",
-                    "@blockscout/ui-toolkit",
-                    "blockscout-typescript",
-                    "blockscout-cli",
-                    "hardhat",
-                    "@nomicfoundation/hardhat-toolbox"
+                    "ethers"
                 ]
             },
             "cache_warm": {
                 "npm": [
-                    "@evmexplorer/blockscout@latest",
-                    "@blockscout/app-sdk@latest",
-                    "@blockscout/ui-toolkit@latest",
-                    "blockscout-typescript@latest",
-                    "blockscout-cli@latest",
-                    "graphql-request@latest"
+                    "@xmtp/xmtp-js@latest",
+                    "@xmtp/react-sdk@latest",
+                    "@xmtp/mls-client@latest"
+                ]
+            }
+        },
+        "zksync": {
+            "base": "rust",
+            "packages": {
+                "npm": [
+                    "zksync-ethers",
+                    "ethers",
+                    "zksync-cli",
+                    "hardhat",
+                    "@matterlabs/hardhat-zksync"
+                ]
+            },
+            "custom_install": {
+                "env": {
+                    "PATH": "/root/.foundry-zksync/bin:/usr/local/cargo/bin:$PATH"
+                },
+                "root_commands": [
+                    "curl -L https://raw.githubusercontent.com/matter-labs/foundry-zksync/main/install-foundry-zksync | bash && /root/.foundry-zksync/bin/foundryup-zksync && chmod -R a+rx /root/.foundry-zksync",
+                    "curl -L https://raw.githubusercontent.com/matter-labs/anvil-zksync/main/scripts/install.sh | bash && chmod -R a+rx /root/.anvil-zksync || echo 'anvil-zksync installed'",
+                    "forge --version && cast --version || echo 'foundry-zksync installed'"
                 ]
             }
         }
