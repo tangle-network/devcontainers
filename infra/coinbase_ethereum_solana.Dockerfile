@@ -9,7 +9,7 @@ USER root
 
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
-    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME
+    && chmod -R a+rwX $RUSTUP_HOME $CARGO_HOME
 
 # Install Node.js packages (Coinbase + Ethereum)
 RUN npm install -g @coinbase/coinbase-sdk ethers viem @wagmi/core
@@ -26,4 +26,3 @@ RUN curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.
 USER agent
 
 LABEL description="Combined: coinbase, ethereum, solana (custom)"
-
