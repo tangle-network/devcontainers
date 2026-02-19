@@ -6,7 +6,8 @@ USER root
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh && \
     curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh && \
     if [ -f /root/.local/bin/snfoundryup ]; then /root/.local/bin/snfoundryup; fi && \
-    pip3 install --no-cache-dir --break-system-packages cairo-lang starknet-py
+    python3 -m pip install --no-cache-dir --break-system-packages --ignore-installed --upgrade pip && \
+    python3 -m pip install --no-cache-dir --break-system-packages --ignore-installed cairo-lang starknet-py
 
 USER agent
 

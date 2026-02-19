@@ -18,7 +18,7 @@ RUN curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | gpg --dearmor
 USER agent
 
 USER root
-RUN npm install -g mongodb mongoose @types/mongoose mongosh
+RUN npm install -g mongodb mongoose @types/mongoose
 USER agent
 
 LABEL description="mongodb infrastructure layer"

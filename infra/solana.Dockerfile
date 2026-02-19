@@ -19,7 +19,7 @@ RUN mkdir -p /tmp/cargo-warm && \
     rm -rf /tmp/cargo-warm
 
 USER root
-RUN chmod -R a+w $CARGO_HOME
+RUN chmod -R a+rwX $CARGO_HOME
 USER agent
 
 LABEL description="solana infrastructure layer"

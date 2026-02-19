@@ -7,7 +7,7 @@ RUN npm install -g @ton-community/func-js && \
 USER agent
 
 USER root
-RUN npm install -g @ton/core @ton/crypto @ton/ton @ton/blueprint @tact-lang/compiler ton-access
+RUN npm install -g @ton/core @ton/crypto @ton/ton @ton/blueprint @tact-lang/compiler
 USER agent
 
 LABEL description="ton infrastructure layer"
