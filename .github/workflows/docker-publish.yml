@@ -396,6 +396,8 @@ jobs:
           - coinbase_polygon
           - ethereum
           - farcaster
+          - fhenix-foundry
+          - fhenix-hardhat
           - foundry
           - gelato
           - gnosis
