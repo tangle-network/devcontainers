@@ -210,6 +210,7 @@ ENV SHELL=/bin/bash \
     XDG_CONFIG_HOME=/home/agent/.config \
     XDG_CACHE_HOME=/home/agent/.cache \
     XDG_STATE_HOME=/home/agent/.local/state \
+    NODE_PATH=/usr/lib/node_modules \
     PATH="/home/agent/.local/share/pnpm:/home/agent/.local/share/mise/shims:/home/agent/.local/bin:/home/agent/.cargo/bin:$PATH"
 
 # npm configuration
