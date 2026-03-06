@@ -1,7 +1,7 @@
 FROM rust:latest
 
 USER root
-RUN npm install -g @tangle-network/tangle-substrate-types
+RUN npm install -g @webb-tools/tangle-substrate-types
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev && \
