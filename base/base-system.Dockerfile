@@ -280,6 +280,11 @@ RUN npm --version && \
     pnpm config get registry && \
     (opencode --version || true)
 
+# Fix permissions AFTER verification (opencode --version creates dirs as agent:755)
+USER root
+RUN chmod -R 777 /home/agent
+USER agent
+
 EXPOSE 8080
 
 LABEL description="Base system with Node.js for all MCP services"
