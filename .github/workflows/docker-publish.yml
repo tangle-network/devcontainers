@@ -8,6 +8,9 @@ on:
       - 'intermediate/**'
       - 'infra/**'
       - '.github/workflows/docker-publish.yml'
+  schedule:
+    # Daily rebuild to pick up upstream base image updates
+    - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
       layer:
@@ -34,10 +37,52 @@ env:
 
 jobs:
   # ============================================
+  # GENERATE DYNAMIC MATRIX FROM DOCKERFILES
+  # ============================================
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      infra-base: ${{ steps.matrix.outputs.infra-base }}
+      infra-rust: ${{ steps.matrix.outputs.infra-rust }}
+      infra-go: ${{ steps.matrix.outputs.infra-go }}
+      infra-foundry: ${{ steps.matrix.outputs.infra-foundry }}
+      infra-scientific-python: ${{ steps.matrix.outputs.infra-scientific-python }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate matrices from infra Dockerfiles
+        id: matrix
+        run: |
+          # For each infra Dockerfile, read the final FROM line and group by base image
+          declare -A groups
+          for df in infra/*.Dockerfile; do
+            name=$(basename "$df" .Dockerfile)
+            base=$(grep "^FROM" "$df" | tail -1 | awk '{print $2}' | cut -d: -f1)
+            case "$base" in
+              base-system)        key="infra-base" ;;
+              rust)               key="infra-rust" ;;
+              go)                 key="infra-go" ;;
+              foundry)            key="infra-foundry" ;;
+              scientific-python)  key="infra-scientific-python" ;;
+              *) echo "WARNING: Unknown base '$base' in $df, skipping"; continue ;;
+            esac
+            groups[$key]="${groups[$key]:+${groups[$key]},}\"$name\""
+          done
+          # Output each group as a JSON array
+          for key in infra-base infra-rust infra-go infra-foundry infra-scientific-python; do
+            if [ -n "${groups[$key]}" ]; then
+              echo "${key}=[${groups[$key]}]" >> "$GITHUB_OUTPUT"
+            else
+              echo "${key}=[]" >> "$GITHUB_OUTPUT"
+            fi
+          done
+
+  # ============================================
   # BASE LAYER
   # ============================================
   build-base:
-    if: github.event_name == 'push' || inputs.layer == 'all' || inputs.layer == 'base'
+    if: github.event_name == 'push' || github.event_name == 'schedule' || inputs.layer == 'all' || inputs.layer == 'base'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -83,7 +128,7 @@ jobs:
   # INTERMEDIATE LAYERS (depend on base)
   # ============================================
   build-intermediate:
-    if: github.event_name == 'push' || inputs.layer == 'all' || inputs.layer == 'intermediate'
+    if: github.event_name == 'push' || github.event_name == 'schedule' || inputs.layer == 'all' || inputs.layer == 'intermediate'
     needs: build-base
     runs-on: ubuntu-latest
     permissions:
@@ -134,7 +179,7 @@ jobs:
 
   # Foundry intermediate (depends on rust)
   build-foundry-intermediate:
-    if: github.event_name == 'push' || inputs.layer == 'all' || inputs.layer == 'intermediate'
+    if: github.event_name == 'push' || github.event_name == 'schedule' || inputs.layer == 'all' || inputs.layer == 'intermediate'
     needs: build-intermediate
     runs-on: ubuntu-latest
     permissions:
@@ -180,13 +225,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ============================================
-  # INFRASTRUCTURE LAYERS
+  # INFRASTRUCTURE LAYERS (dynamic matrices)
   # ============================================
 
   # Base-system dependent infra
   build-infra-base:
-    if: github.event_name == 'push' || inputs.layer == 'all' || inputs.layer == 'infra'
-    needs: build-base
+    if: (github.event_name == 'push' || github.event_name == 'schedule' || inputs.layer == 'all' || inputs.layer == 'infra') && needs.generate-matrix.outputs.infra-base != '[]'
+    needs: [generate-matrix, build-base]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -194,28 +239,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image:
-          - ai-sdk
-          - blockscout
-          - clickhouse
-          - convex
-          - elasticsearch
-          - injective
-          - kafka
-          - kubernetes
-          - milvus
-          - minio
-          - mongodb
-          - ollama
-          - pgvector
-          - postgresql
-          - pulumi
-          - redis
-          - terraform
-          - ton
-          - universal
-          - weaviate
-          - xmtp
+        image: ${{ fromJson(needs.generate-matrix.outputs.infra-base) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -257,8 +281,8 @@ jobs:
 
   # Rust dependent infra
   build-infra-rust:
-    if: github.event_name == 'push' || inputs.layer == 'all' || inputs.layer == 'infra'
-    needs: build-intermediate
+    if: (github.event_name == 'push' || github.event_name == 'schedule' || inputs.layer == 'all' || inputs.layer == 'infra') && needs.generate-matrix.outputs.infra-rust != '[]'
+    needs: [generate-matrix, build-intermediate]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -266,21 +290,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image:
-          - aptos
-          - hyperlane
-          - hyperliquid
-          - near
-          - qdrant
-          - reth
-          - rindexer
-          - risc0
-          - solana
-          - starknet
-          - succinct
-          - sui
-          - tangle
-          - zksync
+        image: ${{ fromJson(needs.generate-matrix.outputs.infra-rust) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -322,8 +332,8 @@ jobs:
 
   # Go dependent infra
   build-infra-go:
-    if: github.event_name == 'push' || inputs.layer == 'all' || inputs.layer == 'infra'
-    needs: build-intermediate
+    if: (github.event_name == 'push' || github.event_name == 'schedule' || inputs.layer == 'all' || inputs.layer == 'infra') && needs.generate-matrix.outputs.infra-go != '[]'
+    needs: [generate-matrix, build-intermediate]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -331,8 +341,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image:
-          - cosmos
+        image: ${{ fromJson(needs.generate-matrix.outputs.infra-go) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -374,8 +383,8 @@ jobs:
 
   # Foundry dependent infra (EVM chains)
   build-infra-foundry:
-    if: github.event_name == 'push' || inputs.layer == 'all' || inputs.layer == 'infra'
-    needs: build-foundry-intermediate
+    if: (github.event_name == 'push' || github.event_name == 'schedule' || inputs.layer == 'all' || inputs.layer == 'infra') && needs.generate-matrix.outputs.infra-foundry != '[]'
+    needs: [generate-matrix, build-foundry-intermediate]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -383,37 +392,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image:
-          - arbitrum
-          - base-aa
-          - base-l2
-          - biconomy
-          - brevis
-          - chainlink
-          - coinbase
-          - coinbase_ethereum
-          - coinbase_ethereum_solana
-          - coinbase_polygon
-          - ethereum
-          - farcaster
-          - fhenix-foundry
-          - fhenix-hardhat
-          - gelato
-          - gnosis
-          - hardhat
-          - lifi
-          - linea
-          - monad
-          - openzeppelin
-          - optimism
-          - polygon
-          - polymer
-          - soneium
-          - stylus
-          - tempo
-          - worldcoin
-          - x402-payments
-          - xlayer
+        image: ${{ fromJson(needs.generate-matrix.outputs.infra-foundry) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -455,8 +434,8 @@ jobs:
 
   # Scientific Python dependent infra (CPU AI/ML)
   build-infra-scientific-python:
-    if: github.event_name == 'push' || inputs.layer == 'all' || inputs.layer == 'infra'
-    needs: build-intermediate
+    if: (github.event_name == 'push' || github.event_name == 'schedule' || inputs.layer == 'all' || inputs.layer == 'infra') && needs.generate-matrix.outputs.infra-scientific-python != '[]'
+    needs: [generate-matrix, build-intermediate]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -464,17 +443,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image:
-          - ai-agent-web3
-          - chromadb
-          - huggingface-cpu
-          - jupyter
-          - langchain
-          - llamaindex
-          - mlops
-          - pytorch-cpu
-          - tensorflow-cpu
-          - vllm-cpu
+        image: ${{ fromJson(needs.generate-matrix.outputs.infra-scientific-python) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

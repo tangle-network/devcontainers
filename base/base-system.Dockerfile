@@ -2,22 +2,31 @@
 # Layer 0: Base System - Common to ALL services
 FROM ubuntu:24.04
 
+# Version pins for toolchain binaries
+ARG OPENCODE_VERSION=1.1.46
+ARG BUN_VERSION=1.3.5
+ARG SCCACHE_VERSION=0.8.1
+ARG NEWT_VERSION=1.10.0
+ARG MISE_VERSION=2026.1.1
+ARG GH_VERSION=2.65.0
+
 # System dependencies
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       build-essential pkg-config libssl-dev libudev-dev \
       curl wget git jq rsync make cmake gcc g++ llvm procps \
       ca-certificates tini libclang-dev libjemalloc-dev sudo \
-      python3 python3-pip python3-setuptools python3-venv; \
+      python3 python3-pip python3-setuptools python3-venv \
+      unzip ripgrep; \
     rm -rf /var/lib/apt/lists/*
 
 # Node.js 22 + package managers + common tools
-# Note: opencode-ai is installed by the sidecar, not here
+# Note: opencode binary is installed separately below
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
     && npm install -g corepack \
     && corepack prepare pnpm yarn --activate \
-    && npm install -g patch-package vite tsx turbo typescript @types/node node-pty \
+    && npm install -g patch-package vite tsx turbo typescript @types/node node-pty@1.0.0 \
     && rm -rf /var/lib/apt/lists/*
 
 # LSP servers for code intelligence
@@ -131,18 +140,81 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 # Install Factory Droids CLI
 RUN curl -fsSL https://app.factory.ai/cli | sh
 
+# Install CLI tools: OpenCode, Bun, sccache, Newt, mise, GitHub CLI
+RUN set -eux; \
+    arch="$(uname -m)"; \
+    case "$arch" in \
+        x86_64)  deb_arch="amd64"; short_arch="x64"; bun_arch="x64" ;; \
+        aarch64) deb_arch="arm64"; short_arch="arm64"; bun_arch="aarch64" ;; \
+        *) echo "Unsupported architecture: $arch" && exit 1 ;; \
+    esac; \
+    # Detect musl vs glibc for Alpine compatibility \
+    if ldd /bin/sh 2>&1 | grep -q musl; then musl_suffix="-musl"; else musl_suffix=""; fi; \
+    # --- OpenCode (uses x64/arm64) --- \
+    curl -fsSL "https://github.com/sst/opencode/releases/download/v${OPENCODE_VERSION}/opencode-linux-${short_arch}${musl_suffix}.tar.gz" \
+      | tar -xzf - -C /usr/local/bin; \
+    chmod +x /usr/local/bin/opencode; \
+    # --- Bun (uses x64/aarch64) --- \
+    curl -fsSL "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-${bun_arch}${musl_suffix}.zip" -o /tmp/bun.zip; \
+    unzip -oq /tmp/bun.zip -d /tmp/bun-install; \
+    mv /tmp/bun-install/bun-linux-${bun_arch}${musl_suffix}/bun /usr/local/bin/bun; \
+    chmod +x /usr/local/bin/bun; \
+    rm -rf /tmp/bun.zip /tmp/bun-install; \
+    # --- sccache (uses x86_64/aarch64) --- \
+    curl -fsSL "https://github.com/mozilla/sccache/releases/download/v${SCCACHE_VERSION}/sccache-v${SCCACHE_VERSION}-${arch}-unknown-linux-musl.tar.gz" \
+      | tar -xzf - --strip-components=1 -C /usr/local/bin "sccache-v${SCCACHE_VERSION}-${arch}-unknown-linux-musl/sccache"; \
+    chmod +x /usr/local/bin/sccache; \
+    # --- Newt (uses amd64/arm64) --- \
+    curl -fsSL "https://github.com/fosrl/newt/releases/download/${NEWT_VERSION}/newt_linux_${deb_arch}" -o /usr/local/bin/newt; \
+    chmod +x /usr/local/bin/newt; \
+    # --- mise (uses x64/arm64, binary at mise/bin/mise) --- \
+    curl -fsSL "https://github.com/jdx/mise/releases/download/v${MISE_VERSION}/mise-v${MISE_VERSION}-linux-${short_arch}${musl_suffix}.tar.gz" \
+      | tar -xzf - --strip-components=2 -C /usr/local/bin mise/bin/mise; \
+    chmod +x /usr/local/bin/mise; \
+    # --- GitHub CLI (uses amd64/arm64) --- \
+    curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${deb_arch}.tar.gz" \
+      | tar -xzf - --strip-components=2 -C /usr/local/bin "gh_${GH_VERSION}_linux_${deb_arch}/bin/gh"; \
+    chmod +x /usr/local/bin/gh
+
+# Git credential helper for GitHub token auth
+COPY <<'EOF' /usr/local/bin/git-credential-github-token
+#!/bin/sh
+if [ "$1" = "get" ] && [ -n "$GITHUB_TOKEN" ]; then
+  echo "username=x-access-token"
+  echo "password=$GITHUB_TOKEN"
+fi
+EOF
+RUN chmod +x /usr/local/bin/git-credential-github-token && \
+    git config --system credential.helper /usr/local/bin/git-credential-github-token
+
 # Create agent user and group for secure operations
 # Use the existing ubuntu user (UID/GID 1000) and add to sudoers
 RUN echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
     usermod -l agent -d /home/agent -m ubuntu && \
-    groupmod -n agent ubuntu && \
-    # Create appuser as an alias for agent user for MCP compatibility \
-    useradd --uid 1001 --gid 1000 --shell /bin/bash --home-dir /home/agent --no-create-home appuser && \
-    echo 'appuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+    groupmod -n agent ubuntu
 
-# Set up npm configuration for better caching and performance
-RUN npm config set cache /tmp/.npm-cache --global \
-    && npm config set prefer-offline false --global \
+# Consolidated environment variables
+ENV SHELL=/bin/bash \
+    HOME=/home/agent \
+    NPM_CONFIG_CACHE=/home/agent/.cache/npm \
+    PNPM_HOME=/home/agent/.local/share/pnpm \
+    npm_config_store_dir=/home/agent/.pnpm-store \
+    CARGO_HOME=/home/agent/.cargo \
+    PIP_CACHE_DIR=/home/agent/.cache/pip \
+    SCCACHE_DIR=/home/agent/.cache/sccache \
+    GOMODCACHE=/home/agent/.cache/go \
+    MISE_DATA_DIR=/home/agent/.local/share/mise \
+    MISE_CACHE_DIR=/home/agent/.cache/mise \
+    MISE_YES=1 \
+    XDG_DATA_HOME=/home/agent/.local/share \
+    XDG_CONFIG_HOME=/home/agent/.config \
+    XDG_CACHE_HOME=/home/agent/.cache \
+    XDG_STATE_HOME=/home/agent/.local/state \
+    NODE_PATH=/usr/lib/node_modules \
+    PATH="/home/agent/.local/share/pnpm:/home/agent/.local/share/mise/shims:/home/agent/.local/bin:/home/agent/.cargo/bin:$PATH"
+
+# npm configuration
+RUN npm config set prefer-offline false --global \
     && npm config set registry https://registry.npmjs.org/ --global \
     && npm config set fetch-retries 3 --global \
     && npm config set fetch-retry-factor 10 --global \
@@ -151,37 +223,70 @@ RUN npm config set cache /tmp/.npm-cache --global \
     && npm config set maxsockets 15 --global \
     && npm config set legacy-peer-deps false --global
 
-# Create common directories with secure permissions
-RUN mkdir -p /home/agent /home/agent/workspace /tmp/.npm-cache /tmp/.pnpm-store && \
-    chown -R agent:agent /home/agent /tmp/.npm-cache /tmp/.pnpm-store && \
-    chmod -R 755 /tmp/.npm-cache /tmp/.pnpm-store
-
-# Clear npm cache and set pnpm store directory with proper ownership
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+# pnpm configuration
 RUN npm cache clean --force && \
-    pnpm config set store-dir /tmp/.pnpm-store && \
+    pnpm config set store-dir /home/agent/.pnpm-store && \
     pnpm config set registry https://registry.npmjs.org/ && \
     pnpm config set fetch-retries 3 && \
     pnpm config set fetch-retry-factor 10 && \
     pnpm config set fetch-retry-mintimeout 10000 && \
-    pnpm config set fetch-retry-maxtimeout 60000 && \
-    mkdir -p /pnpm && \
-    chown -R agent:agent /pnpm
+    pnpm config set fetch-retry-maxtimeout 60000
 
-# Set up workspace with proper permissions
-RUN chown -R agent:agent /home/agent/workspace
+# Create all directories with proper permissions
+RUN mkdir -p \
+    /home/agent/.cache/npm \
+    /home/agent/.cache/pip \
+    /home/agent/.cache/mise \
+    /home/agent/.cache/sccache \
+    /home/agent/.cache/go \
+    /home/agent/.local/share/pnpm \
+    /home/agent/.pnpm-store \
+    /home/agent/.cargo \
+    /home/agent/.local/bin \
+    /home/agent/.local/share \
+    /home/agent/.local/share/mise \
+    /home/agent/.local/share/mise/shims \
+    /home/agent/.local/state \
+    /home/agent/.config \
+    /home/agent/.sidecar/state \
+    /home/agent/workspace && \
+    chmod -R 777 /home/agent
 
-WORKDIR /home/agent/workspace
+# Sidecar mount points (populated via bind mounts at runtime)
+RUN mkdir -p /sidecar /shared && \
+    chmod 755 /sidecar /shared
+
+# Module resolution symlinks for sidecar
+RUN mkdir -p /sidecar/node_modules/@repo && \
+    ln -sf $(npm root -g)/node-pty /sidecar/node_modules/node-pty && \
+    ln -sf /shared /sidecar/node_modules/@repo/shared
+
+WORKDIR /home/agent
 
 # Switch to agent user for safer operations
 USER agent
 
-# Verify npm and pnpm work correctly as agent user
+# Verify tools work correctly as agent user
 RUN npm --version && \
     pnpm --version && \
     node --version && \
+    bun --version && \
+    gh --version && \
+    mise --version && \
+    sccache --version && \
+    rg --version && \
+    npm list -g node-pty && \
     npm config get registry && \
-    pnpm config get registry
+    pnpm config get registry && \
+    (opencode --version || true)
+
+# Fix permissions AFTER verification (opencode --version creates dirs as agent:755)
+USER root
+RUN chmod -R 777 /home/agent
+USER agent
+
+EXPOSE 8080
 
 LABEL description="Base system with Node.js for all MCP services"
+LABEL agent.sidecar=layered
+LABEL agent.sidecar.version=2.0
