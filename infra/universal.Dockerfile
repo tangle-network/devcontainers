@@ -20,7 +20,7 @@ RUN ARCH=$(dpkg --print-architecture) && if [ "$ARCH" = "amd64" ]; then GO_ARCH=
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && chmod -R a+rwX $RUSTUP_HOME $CARGO_HOME && rustup component add rustfmt clippy rust-analyzer && \
     curl -sSL https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer && \
     gem install bundler && \
-    KOTLIN_VERSION=$(curl -s https://api.github.com/repos/JetBrains/kotlin/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/') && curl -sL https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip -o kotlin.zip && unzip -q kotlin.zip -d /opt && rm kotlin.zip && chmod -R a+rx /opt/kotlinc && \
+    KOTLIN_VERSION="2.1.0" && curl -fSL https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip -o kotlin.zip && unzip -q kotlin.zip -d /opt && rm kotlin.zip && chmod -R a+rx /opt/kotlinc && \
     pip3 install --no-cache-dir --break-system-packages poetry black mypy ruff pipx && \
     su - agent -c 'export PATH=/usr/local/go/bin:/go/bin:$PATH GOPATH=/go && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest' && \
     su - agent -c 'export PATH=/usr/local/go/bin:/go/bin:$PATH GOPATH=/go && go install golang.org/x/tools/gopls@latest'
