@@ -169,7 +169,7 @@ function generateInfraDockerfile(project, config, outputDir) {
     
     if (customInstall && customInstall.root_commands && customInstall.root_commands.length > 0) {
         dockerfileLines.push(`\nUSER root\n`);
-        dockerfileLines.push(`RUN `);
+        dockerfileLines.push(`RUN export HOME=/root && \\\n    `);
         const commands = customInstall.root_commands
             .map(normalizeRootCommand)
             .join(' && \\\n    ');
@@ -308,7 +308,7 @@ function generateCombinedDockerfile(projectNames, outputDir) {
     
     if (allRootCommands.length > 0) {
         dockerfileLines.push(`\nUSER root\n`);
-        dockerfileLines.push(`RUN `);
+        dockerfileLines.push(`RUN export HOME=/root && \\\n    `);
         const commands = allRootCommands
             .map(normalizeRootCommand)
             .join(' && \\\n    ');

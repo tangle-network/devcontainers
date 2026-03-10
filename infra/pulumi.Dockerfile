@@ -1,7 +1,7 @@
 FROM base-system:latest
 
 USER root
-RUN curl -fsSL https://get.pulumi.com | sh && \
+RUN export HOME=/root && curl -fsSL https://get.pulumi.com | sh && \
     mv /root/.pulumi/bin/* /usr/local/bin/ && \
     python3 -m pip install --no-cache-dir --break-system-packages --ignore-installed --upgrade pip && \
     python3 -m pip install --no-cache-dir --break-system-packages --ignore-installed pulumi pulumi-aws pulumi-gcp pulumi-kubernetes && \

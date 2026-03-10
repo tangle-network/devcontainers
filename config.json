@@ -1,7 +1,7 @@
 {
     "intermediate_templates": {
         "rust": "FROM base-system:latest\n\nENV RUSTUP_HOME=/usr/local/rustup \\\n    CARGO_HOME=/usr/local/cargo \\\n    PATH=/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \\\n    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME\n\n# Pre-warm cargo cache with commonly used crates\nRUN mkdir -p /tmp/cargo-warm && \\\n    printf '[package]\\nname = \"warm\"\\nversion = \"0.0.0\"\\nedition = \"2021\"\\n\\n[dependencies]\\ntokio = { version = \"1\", features = [\"full\"] }\\nserde = { version = \"1\", features = [\"derive\"] }\\nserde_json = \"1\"\\nthiserror = \"1\"\\nanyhow = \"1\"\\ntracing = \"0.1\"\\ntracing-subscriber = \"0.3\"\\nasync-trait = \"0.1\"\\nfutures = \"0.3\"\\nreqwest = { version = \"0.12\", features = [\"json\"] }\\nclap = { version = \"4\", features = [\"derive\"] }\\n' > /tmp/cargo-warm/Cargo.toml && \\\n    mkdir -p /tmp/cargo-warm/src && \\\n    echo 'fn main() {}' > /tmp/cargo-warm/src/main.rs && \\\n    cd /tmp/cargo-warm && cargo fetch && \\\n    rm -rf /tmp/cargo-warm && \\\n    chmod -R a+w $CARGO_HOME\n\n# Install rust-analyzer LSP for Rust code intelligence\nRUN rustup component add rust-analyzer && \\\n    ln -sf $(rustup which --toolchain stable rust-analyzer) /usr/local/bin/rust-analyzer\n\nUSER agent\n\nLABEL description=\"Rust intermediate layer\"\n",
-        "foundry": "FROM rust:latest\n\nENV PATH=/root/.foundry/bin:/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN curl -L https://foundry.paradigm.xyz | bash \\\n    && /root/.foundry/bin/foundryup \\\n    && chmod -R a+rx /root/.foundry\n\nUSER agent\n\nLABEL description=\"Foundry intermediate layer (forge, cast, anvil, chisel)\"\n",
+        "foundry": "FROM rust:latest\n\nENV PATH=/root/.foundry/bin:/usr/local/cargo/bin:$PATH\n\nUSER root\nRUN export HOME=/root && curl -L https://foundry.paradigm.xyz | bash \\\n    && /root/.foundry/bin/foundryup \\\n    && chmod -R a+rx /root/.foundry\n\nUSER agent\n\nLABEL description=\"Foundry intermediate layer (forge, cast, anvil, chisel)\"\n",
         "scientific-python": "FROM base-system:latest\n\nUSER root\nRUN pip3 install --no-cache-dir --break-system-packages \\\n    numpy scipy pandas matplotlib seaborn plotly \\\n    scikit-learn scikit-image \\\n    jupyter jupyterlab ipython notebook \\\n    pillow opencv-python-headless \\\n    h5py pyarrow fastparquet \\\n    tqdm rich typer click \\\n    httpx aiohttp requests \\\n    pydantic pydantic-settings \\\n    python-dotenv PyYAML toml \\\n    && jupyter --version\n\nUSER agent\n\nLABEL description=\"Scientific Python intermediate layer (NumPy, SciPy, Pandas, Jupyter, ML basics)\"\n",
         "go": "FROM base-system:latest\n\nENV GOROOT=/usr/local/go \\\n    GOPATH=/go \\\n    PATH=/usr/local/go/bin:/go/bin:$PATH\n\nUSER root\nRUN ARCH=$(dpkg --print-architecture) && \\\n    if [ \"$ARCH\" = \"amd64\" ]; then GO_ARCH=\"amd64\"; \\\n    elif [ \"$ARCH\" = \"arm64\" ]; then GO_ARCH=\"arm64\"; \\\n    else echo \"Unsupported architecture: $ARCH\"; exit 1; fi && \\\n    curl -fsSL https://go.dev/dl/go1.22.0.linux-${GO_ARCH}.tar.gz | tar -C /usr/local -xzf - && \\\n    mkdir -p /go/bin /go/pkg /go/src && \\\n    chmod -R a+w /go\n\n# Install gopls LSP for Go code intelligence\nRUN go install golang.org/x/tools/gopls@latest && \\\n    ln -sf /go/bin/gopls /usr/local/bin/gopls\n\nUSER agent\n\nLABEL description=\"Go intermediate layer\"\n"
     },
@@ -317,7 +317,7 @@
                     "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && chmod -R a+w $RUSTUP_HOME $CARGO_HOME && rustup component add rustfmt clippy rust-analyzer",
                     "curl -sSL https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer",
                     "gem install bundler",
-                    "KOTLIN_VERSION=$(curl -s https://api.github.com/repos/JetBrains/kotlin/releases/latest | grep '\"tag_name\"' | sed -E 's/.*\"v([^\"]+)\".*/\\1/') && curl -sL https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip -o kotlin.zip && unzip -q kotlin.zip -d /opt && rm kotlin.zip && chmod -R a+rx /opt/kotlinc",
+                    "KOTLIN_VERSION=2.1.0 && curl -fSL https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip -o kotlin.zip && unzip -q kotlin.zip -d /opt && rm kotlin.zip && chmod -R a+rx /opt/kotlinc",
                     "pip3 install --no-cache-dir --break-system-packages poetry black mypy ruff pipx",
                     "su - agent -c 'export PATH=/usr/local/go/bin:/go/bin:$PATH GOPATH=/go && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest'",
                     "su - agent -c 'export PATH=/usr/local/go/bin:/go/bin:$PATH GOPATH=/go && go install golang.org/x/tools/gopls@latest'"
@@ -525,6 +525,9 @@
                 "env": {
                     "PATH": "/root/.local/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
                 },
+                "apt_packages": [
+                    "libgmp-dev"
+                ],
                 "root_commands": [
                     "curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh",
                     "curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh",

@@ -15,7 +15,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
 RUN npm install -g @coinbase/coinbase-sdk ethers viem @wagmi/core
 
 # Install Solana CLI with all dependencies
-RUN curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash || echo 'Solana installation may not support this architecture. Consider building from source.' \
+RUN export HOME=/root && curl --proto '=https' --tlsv1.2 -sSfL https://solana-install.solana.workers.dev | bash || echo 'Solana installation may not support this architecture. Consider building from source.' \
     && if [ -f /root/.local/share/solana/install/active_release/bin/solana ]; then \
          /root/.local/share/solana/install/active_release/bin/solana --version && \
          chmod -R a+rx /root/.local/share/solana; \
