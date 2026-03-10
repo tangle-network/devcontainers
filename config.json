@@ -525,6 +525,9 @@
                 "env": {
                     "PATH": "/root/.local/bin:/root/.cargo/bin:/usr/local/cargo/bin:$PATH"
                 },
+                "apt_packages": [
+                    "libgmp-dev"
+                ],
                 "root_commands": [
                     "curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh",
                     "curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh",
