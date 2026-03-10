@@ -482,3 +482,49 @@ jobs:
             -f visibility=public || true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================
+  # NOTIFY ORCHESTRATOR OF IMAGE UPDATES
+  # ============================================
+  notify-orchestrator:
+    if: always() && !cancelled()
+    needs:
+      - build-infra-base
+      - build-infra-rust
+      - build-infra-go
+      - build-infra-foundry
+      - build-infra-scientific-python
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if any build succeeded
+        id: check
+        run: |
+          # Only notify if at least one build job succeeded
+          results=("${{ needs.build-infra-base.result }}" \
+                   "${{ needs.build-infra-rust.result }}" \
+                   "${{ needs.build-infra-go.result }}" \
+                   "${{ needs.build-infra-foundry.result }}" \
+                   "${{ needs.build-infra-scientific-python.result }}")
+          for r in "${results[@]}"; do
+            if [ "$r" = "success" ]; then
+              echo "should_notify=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "should_notify=false" >> "$GITHUB_OUTPUT"
+
+      - name: Notify orchestrator of catalog update
+        if: steps.check.outputs.should_notify == 'true'
+        env:
+          ORCHESTRATOR_ADMIN_URL: ${{ secrets.ORCHESTRATOR_ADMIN_URL }}
+          ORCHESTRATOR_ADMIN_API_KEY: ${{ secrets.ORCHESTRATOR_ADMIN_API_KEY }}
+        run: |
+          if [ -z "$ORCHESTRATOR_ADMIN_URL" ] || [ -z "$ORCHESTRATOR_ADMIN_API_KEY" ]; then
+            echo "::warning::Orchestrator secrets not configured, skipping catalog notification"
+            exit 0
+          fi
+          curl -sf --max-time 30 -X POST \
+            "${ORCHESTRATOR_ADMIN_URL}/catalog/notify-update" \
+            -H "Authorization: Bearer ${ORCHESTRATOR_ADMIN_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{}'
