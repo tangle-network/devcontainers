@@ -189,8 +189,47 @@ function testAlphabeticalSorting() {
     cleanup();
 }
 
+function testFoundryIntermediateTemplate() {
+    console.log("\nTesting foundry intermediate template...");
+
+    setup();
+
+    generateDockerfile("ethereum");
+    const file = path.join(INTERMEDIATE_DIR, "foundry.Dockerfile");
+    const content = fs.readFileSync(file, "utf8");
+
+    if (!content.includes("ENV FOUNDRY_DIR=/home/agent/.foundry")) {
+        console.error(
+            "FAILED: Foundry intermediate should set FOUNDRY_DIR under /home/agent",
+        );
+        cleanup();
+        process.exit(1);
+    }
+
+    if (!content.includes("/home/agent/.foundry/bin/foundryup")) {
+        console.error(
+            "FAILED: Foundry intermediate should invoke foundryup from /home/agent",
+        );
+        cleanup();
+        process.exit(1);
+    }
+
+    if (content.includes("/root/.foundry/bin/foundryup")) {
+        console.error(
+            "FAILED: Foundry intermediate should not invoke foundryup from /root",
+        );
+        cleanup();
+        process.exit(1);
+    }
+
+    console.log("PASSED: Foundry intermediate uses agent-owned install path");
+
+    cleanup();
+}
+
 console.log("Running deduplication tests...\n");
 testDeduplication();
 testDifferentOrders();
 testAlphabeticalSorting();
+testFoundryIntermediateTemplate();
 console.log("\n✅ All tests passed!");
