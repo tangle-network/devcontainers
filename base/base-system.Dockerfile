@@ -193,6 +193,41 @@ RUN echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \
     usermod -l agent -d /home/agent -m ubuntu && \
     groupmod -n agent ubuntu
 
+COPY <<'EOF' /usr/local/bin/with-user-home
+#!/bin/sh
+set -eu
+
+remap_agent_path() {
+    var_name="$1"
+    eval "value=\${$var_name-}"
+    case "$value" in
+        /home/agent)
+            export "${var_name}=/root"
+            ;;
+        /home/agent/*)
+            export "${var_name}=/root${value#/home/agent}"
+            ;;
+    esac
+}
+
+if [ "$(id -u)" -eq 0 ]; then
+    for var_name in HOME NPM_CONFIG_CACHE npm_config_cache PNPM_HOME npm_config_store_dir CARGO_HOME RUSTUP_HOME PIP_CACHE_DIR SCCACHE_DIR GOMODCACHE MISE_DATA_DIR MISE_CACHE_DIR XDG_DATA_HOME XDG_CONFIG_HOME XDG_CACHE_HOME XDG_STATE_HOME; do
+        remap_agent_path "$var_name"
+    done
+    case "${PATH:-}" in
+        */home/agent*)
+            PATH=$(printf '%s' "$PATH" | sed 's#/home/agent#/root#g')
+            export PATH
+            ;;
+    esac
+fi
+
+exec "$@"
+EOF
+RUN chmod +x /usr/local/bin/with-user-home
+
+SHELL ["/usr/local/bin/with-user-home", "/bin/bash", "-lc"]
+
 # Consolidated environment variables
 ENV SHELL=/bin/bash \
     HOME=/home/agent \

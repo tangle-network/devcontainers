@@ -62,19 +62,19 @@ function testDeduplication() {
 
     setup();
 
-    generateDockerfile("ethereum_polygon_zksync");
-    const file1 = path.join(INFRA_DIR, "ethereum_polygon_zksync.Dockerfile");
+    generateDockerfile("coinbase_ethereum_polygon");
+    const file1 = path.join(INFRA_DIR, "coinbase_ethereum_polygon.Dockerfile");
     const content1 = fs.readFileSync(file1, "utf8");
 
     execSync(`rm -rf ${INFRA_DIR}`, { stdio: "ignore" });
     fs.mkdirSync(INFRA_DIR, { recursive: true });
 
-    generateDockerfile("zksync_polygon_ethereum");
-    const file2 = path.join(INFRA_DIR, "ethereum_polygon_zksync.Dockerfile");
+    generateDockerfile("polygon_coinbase_ethereum");
+    const file2 = path.join(INFRA_DIR, "coinbase_ethereum_polygon.Dockerfile");
 
     if (!fs.existsSync(file2)) {
         console.error(
-            "❌ FAILED: Expected ethereum_polygon_zksync.Dockerfile to be generated",
+            "❌ FAILED: Expected coinbase_ethereum_polygon.Dockerfile to be generated",
         );
         cleanup();
         process.exit(1);
@@ -91,7 +91,7 @@ function testDeduplication() {
     }
 
     console.log("✅ PASSED: Deduplication works correctly");
-    console.log(`   Generated file: ethereum_polygon_zksync.Dockerfile`);
+    console.log(`   Generated file: coinbase_ethereum_polygon.Dockerfile`);
     console.log(`   Content:\n${content1}`);
 
     cleanup();
@@ -101,7 +101,7 @@ function testDifferentOrders() {
     console.log("\nTesting different order combinations...");
 
     const testCases = [
-        ["coinbase_mongodb", "mongodb_coinbase"],
+        ["coinbase_ethereum", "ethereum_coinbase"],
         ["ethereum_polygon", "polygon_ethereum"],
         ["solana_sui_aptos", "aptos_solana_sui", "sui_aptos_solana"],
     ];
@@ -165,13 +165,13 @@ function testAlphabeticalSorting() {
 
     setup();
 
-    generateDockerfile("zksync_ethereum_polygon");
-    const file = path.join(INFRA_DIR, "ethereum_polygon_zksync.Dockerfile");
+    generateDockerfile("polygon_coinbase_ethereum");
+    const file = path.join(INFRA_DIR, "coinbase_ethereum_polygon.Dockerfile");
     const content = fs.readFileSync(file, "utf8");
 
     if (
         !content.includes(
-            'LABEL description="Combined: ethereum, polygon, zksync"',
+            'LABEL description="Combined: coinbase, ethereum, polygon"',
         )
     ) {
         console.error(
@@ -187,6 +187,32 @@ function testAlphabeticalSorting() {
     );
 
     cleanup();
+}
+
+function testBaseSystemRootHomeWrapper() {
+    console.log("\nTesting base-system root cache remap...");
+
+    const file = path.join(__dirname, "base", "base-system.Dockerfile");
+    const content = fs.readFileSync(file, "utf8");
+
+    if (!content.includes("COPY <<'EOF' /usr/local/bin/with-user-home")) {
+        console.error("FAILED: base-system should install with-user-home helper");
+        process.exit(1);
+    }
+
+    if (!content.includes('SHELL ["/usr/local/bin/with-user-home", "/bin/bash", "-lc"]')) {
+        console.error("FAILED: base-system should route RUN instructions through with-user-home");
+        process.exit(1);
+    }
+
+    for (const variable of ["HOME", "NPM_CONFIG_CACHE", "CARGO_HOME", "XDG_CACHE_HOME"]) {
+        if (!content.includes(variable)) {
+            console.error(`FAILED: with-user-home should remap ${variable}`);
+            process.exit(1);
+        }
+    }
+
+    console.log("PASSED: base-system remaps root cache paths away from /home/agent");
 }
 
 function testFoundryIntermediateTemplate() {
@@ -232,4 +258,5 @@ testDeduplication();
 testDifferentOrders();
 testAlphabeticalSorting();
 testFoundryIntermediateTemplate();
+testBaseSystemRootHomeWrapper();
 console.log("\n✅ All tests passed!");
