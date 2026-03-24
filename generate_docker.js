@@ -186,7 +186,7 @@ function generateInfraDockerfile(project, config, outputDir) {
     if (packages.npm && packages.npm.length > 0) {
         const npmPackages = packages.npm.join(' ');
         dockerfileLines.push(`\nUSER root\n`);
-        dockerfileLines.push(`RUN npm install -g ${npmPackages}\n`);
+        dockerfileLines.push(`RUN npm install -g ${npmPackages} && chown -R agent:agent /tmp/.npm-cache 2>/dev/null || true\n`);
         dockerfileLines.push(`USER agent\n`);
     }
     
@@ -325,7 +325,7 @@ function generateCombinedDockerfile(projectNames, outputDir) {
     if (uniqueNpmPackages.length > 0) {
         const npmPackages = uniqueNpmPackages.join(' ');
         dockerfileLines.push(`\nUSER root\n`);
-        dockerfileLines.push(`RUN npm install -g ${npmPackages}\n`);
+        dockerfileLines.push(`RUN npm install -g ${npmPackages} && chown -R agent:agent /tmp/.npm-cache 2>/dev/null || true\n`);
         dockerfileLines.push(`USER agent\n`);
     }
     
