@@ -1,0 +1,247 @@
+name: Build Toolchain Volumes
+
+# Builds toolchain layers as filesystem tarballs and publishes them
+# as OCI artifacts to GHCR. These replace per-stack Docker images —
+# hosts download and extract them, then bind-mount onto thin base containers.
+#
+# See: agent-dev-container/docs/rfcs/toolchain-volumes.md
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'base/**'
+      - 'intermediate/**'
+      - 'config.json'
+      - '.github/workflows/toolchain-volumes.yml'
+  workflow_dispatch:
+    inputs:
+      layers:
+        description: 'Layers to build (comma-separated, or "all")'
+        default: 'all'
+        type: string
+
+concurrency:
+  group: toolchain-volumes-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  TOOLCHAIN_PREFIX: ghcr.io/${{ github.repository_owner }}/toolchains
+
+jobs:
+  # ─── Base toolchain: Ubuntu 24.04 + Node.js + Python + build tools + CLIs ───
+  build-base:
+    if: >
+      github.event_name == 'push' ||
+      contains(inputs.layers, 'all') ||
+      contains(inputs.layers, 'base')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.export.outputs.digest }}
+      size: ${{ steps.export.outputs.size }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build base toolchain image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: base/base-system.Dockerfile
+          platforms: linux/amd64
+          load: true
+          tags: toolchain-base:build
+          cache-from: type=gha,scope=toolchain-base
+          cache-to: type=gha,mode=max,scope=toolchain-base
+
+      - name: Export filesystem as tarball
+        id: export
+        run: |
+          cid=$(docker create toolchain-base:build /bin/true)
+          docker export "$cid" | gzip > /tmp/toolchain-base.tar.gz
+          docker rm "$cid" > /dev/null
+
+          size=$(du -sh /tmp/toolchain-base.tar.gz | cut -f1)
+          digest=$(sha256sum /tmp/toolchain-base.tar.gz | cut -d' ' -f1)
+          echo "size=$size" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "Base toolchain: $size (sha256:$digest)"
+
+      - name: Push as OCI artifact
+        run: |
+          # Push tarball to GHCR using oras
+          curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz | tar -xzf - -C /usr/local/bin oras
+          oras push "${{ env.TOOLCHAIN_PREFIX }}/base:${{ github.sha }}" \
+            --artifact-type "application/vnd.tangle.toolchain.v1+tar.gz" \
+            /tmp/toolchain-base.tar.gz:application/gzip
+          oras tag "${{ env.TOOLCHAIN_PREFIX }}/base:${{ github.sha }}" latest
+
+      - name: Make package public
+        run: |
+          gh api --method PUT /orgs/${{ github.repository_owner }}/packages/container/toolchains%2Fbase/visibility \
+            -f visibility=public || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─── Intermediate toolchains: foundry, rust, go, scientific-python ───
+  build-intermediate:
+    if: >
+      github.event_name == 'push' ||
+      contains(inputs.layers, 'all') ||
+      contains(inputs.layers, 'foundry') ||
+      contains(inputs.layers, 'rust') ||
+      contains(inputs.layers, 'go') ||
+      contains(inputs.layers, 'scientific-python')
+    needs: build-base
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: foundry
+            dockerfile: |
+              FROM rust:latest
+              ENV PATH=/root/.foundry/bin:/usr/local/cargo/bin:$PATH
+              RUN curl -L https://foundry.paradigm.xyz | bash && \
+                  /root/.foundry/bin/foundryup && \
+                  chmod -R a+rx /root/.foundry
+          - name: rust
+            dockerfile: |
+              FROM rust:latest
+              RUN rustup target add wasm32-unknown-unknown 2>/dev/null || true
+          - name: go
+            dockerfile: |
+              FROM golang:1.23-bookworm
+              RUN go install golang.org/x/tools/gopls@latest 2>/dev/null || true
+          - name: scientific-python
+            dockerfile: |
+              FROM python:3.12-slim
+              RUN pip install --no-cache-dir numpy scipy pandas matplotlib scikit-learn jupyter 2>/dev/null || true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build ${{ matrix.name }} toolchain
+        run: |
+          echo '${{ matrix.dockerfile }}' > /tmp/Dockerfile.${{ matrix.name }}
+          docker build -t toolchain-${{ matrix.name }}:build -f /tmp/Dockerfile.${{ matrix.name }} /tmp
+
+      - name: Export filesystem as tarball
+        id: export
+        run: |
+          cid=$(docker create toolchain-${{ matrix.name }}:build /bin/true)
+          docker export "$cid" | gzip > /tmp/toolchain-${{ matrix.name }}.tar.gz
+          docker rm "$cid" > /dev/null
+
+          size=$(du -sh /tmp/toolchain-${{ matrix.name }}.tar.gz | cut -f1)
+          digest=$(sha256sum /tmp/toolchain-${{ matrix.name }}.tar.gz | cut -d' ' -f1)
+          echo "size=$size" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "${{ matrix.name }} toolchain: $size (sha256:$digest)"
+
+      - name: Push as OCI artifact
+        run: |
+          curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz | tar -xzf - -C /usr/local/bin oras
+          oras push "${{ env.TOOLCHAIN_PREFIX }}/${{ matrix.name }}:${{ github.sha }}" \
+            --artifact-type "application/vnd.tangle.toolchain.v1+tar.gz" \
+            /tmp/toolchain-${{ matrix.name }}.tar.gz:application/gzip
+          oras tag "${{ env.TOOLCHAIN_PREFIX }}/${{ matrix.name }}:${{ github.sha }}" latest
+
+      - name: Make package public
+        run: |
+          gh api --method PUT /orgs/${{ github.repository_owner }}/packages/container/toolchains%2F${{ matrix.name }}/visibility \
+            -f visibility=public || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─── Publish manifest mapping stacks to layers ───
+  publish-manifest:
+    needs: [build-base, build-intermediate]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate toolchain manifest
+        run: |
+          node -e "
+          const config = require('./config.json');
+          const projects = config.projects || {};
+          const manifest = { version: '${{ github.sha }}', stacks: {} };
+
+          for (const [name, proj] of Object.entries(projects)) {
+            if (typeof proj !== 'object') continue;
+            const base = proj.base || 'base-system';
+            const intermediate = base === 'base-system' ? null : base;
+            manifest.stacks[name] = {
+              intermediate: intermediate,
+              packages: proj.packages || {},
+            };
+          }
+
+          require('fs').writeFileSync(
+            '/tmp/toolchain-manifest.json',
+            JSON.stringify(manifest, null, 2)
+          );
+          console.log('Generated manifest for', Object.keys(manifest.stacks).length, 'stacks');
+          "
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push manifest as OCI artifact
+        run: |
+          curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz | tar -xzf - -C /usr/local/bin oras
+          oras push "${{ env.TOOLCHAIN_PREFIX }}/manifest:${{ github.sha }}" \
+            --artifact-type "application/vnd.tangle.toolchain-manifest.v1+json" \
+            /tmp/toolchain-manifest.json:application/json
+          oras tag "${{ env.TOOLCHAIN_PREFIX }}/manifest:${{ github.sha }}" latest
+
+      - name: Make package public
+        run: |
+          gh api --method PUT /orgs/${{ github.repository_owner }}/packages/container/toolchains%2Fmanifest/visibility \
+            -f visibility=public || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## Toolchain Volumes Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Layer | Artifact | Digest |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| base | \`${{ env.TOOLCHAIN_PREFIX }}/base:${{ github.sha }}\` | \`${{ needs.build-base.outputs.digest }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| manifest | \`${{ env.TOOLCHAIN_PREFIX }}/manifest:${{ github.sha }}\` | — |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Hosts pull with: \`oras pull ${{ env.TOOLCHAIN_PREFIX }}/base:latest\`" >> $GITHUB_STEP_SUMMARY
