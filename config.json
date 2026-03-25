@@ -29,7 +29,17 @@
                     "@coinbase/agentkit@latest",
                     "@x402/fetch@latest",
                     "@x402/axios@latest",
-                    "@x402/express@latest"
+                    "@x402/express@latest",
+                    "next@latest",
+                    "react@latest",
+                    "react-dom@latest",
+                    "typescript@latest",
+                    "tailwindcss@latest",
+                    "postcss@latest",
+                    "autoprefixer@latest",
+                    "@types/react@latest",
+                    "@types/react-dom@latest",
+                    "@types/node@latest"
                 ]
             }
         },
