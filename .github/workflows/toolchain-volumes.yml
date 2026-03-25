@@ -71,11 +71,11 @@ jobs:
         id: export
         run: |
           cid=$(docker create toolchain-base:build /bin/true)
-          docker export "$cid" | gzip > /tmp/toolchain-base.tar.gz
+          docker export "$cid" | gzip > toolchain-base.tar.gz
           docker rm "$cid" > /dev/null
 
-          size=$(du -sh /tmp/toolchain-base.tar.gz | cut -f1)
-          digest=$(sha256sum /tmp/toolchain-base.tar.gz | cut -d' ' -f1)
+          size=$(du -sh toolchain-base.tar.gz | cut -f1)
+          digest=$(sha256sum toolchain-base.tar.gz | cut -d' ' -f1)
           echo "size=$size" >> "$GITHUB_OUTPUT"
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           echo "Base toolchain: $size (sha256:$digest)"
@@ -86,7 +86,7 @@ jobs:
           curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz | tar -xzf - -C /usr/local/bin oras
           oras push "${{ env.TOOLCHAIN_PREFIX }}/base:${{ github.sha }}" \
             --artifact-type "application/vnd.tangle.toolchain.v1+tar.gz" \
-            /tmp/toolchain-base.tar.gz:application/gzip
+            toolchain-base.tar.gz:application/gzip
           oras tag "${{ env.TOOLCHAIN_PREFIX }}/base:${{ github.sha }}" latest
 
       - name: Make package public
@@ -148,18 +148,18 @@ jobs:
 
       - name: Build ${{ matrix.name }} toolchain
         run: |
-          echo '${{ matrix.dockerfile }}' > /tmp/Dockerfile.${{ matrix.name }}
-          docker build -t toolchain-${{ matrix.name }}:build -f /tmp/Dockerfile.${{ matrix.name }} /tmp
+          echo '${{ matrix.dockerfile }}' > Dockerfile.${{ matrix.name }}
+          docker build -t toolchain-${{ matrix.name }}:build -f Dockerfile.${{ matrix.name }} /tmp
 
       - name: Export filesystem as tarball
         id: export
         run: |
           cid=$(docker create toolchain-${{ matrix.name }}:build /bin/true)
-          docker export "$cid" | gzip > /tmp/toolchain-${{ matrix.name }}.tar.gz
+          docker export "$cid" | gzip > toolchain-${{ matrix.name }}.tar.gz
           docker rm "$cid" > /dev/null
 
-          size=$(du -sh /tmp/toolchain-${{ matrix.name }}.tar.gz | cut -f1)
-          digest=$(sha256sum /tmp/toolchain-${{ matrix.name }}.tar.gz | cut -d' ' -f1)
+          size=$(du -sh toolchain-${{ matrix.name }}.tar.gz | cut -f1)
+          digest=$(sha256sum toolchain-${{ matrix.name }}.tar.gz | cut -d' ' -f1)
           echo "size=$size" >> "$GITHUB_OUTPUT"
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
           echo "${{ matrix.name }} toolchain: $size (sha256:$digest)"
@@ -169,7 +169,7 @@ jobs:
           curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz | tar -xzf - -C /usr/local/bin oras
           oras push "${{ env.TOOLCHAIN_PREFIX }}/${{ matrix.name }}:${{ github.sha }}" \
             --artifact-type "application/vnd.tangle.toolchain.v1+tar.gz" \
-            /tmp/toolchain-${{ matrix.name }}.tar.gz:application/gzip
+            toolchain-${{ matrix.name }}.tar.gz:application/gzip
           oras tag "${{ env.TOOLCHAIN_PREFIX }}/${{ matrix.name }}:${{ github.sha }}" latest
 
       - name: Make package public
